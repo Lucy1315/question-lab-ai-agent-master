@@ -7,11 +7,23 @@ from langchain_openai import ChatOpenAI
 load_dotenv()
 
 
+def _get_api_key() -> str:
+    """Get API key from environment or Streamlit secrets."""
+    key = os.getenv("OPENAI_API_KEY")
+    if not key:
+        try:
+            import streamlit as st
+            key = st.secrets.get("OPENAI_API_KEY")
+        except Exception:
+            pass
+    return key or ""
+
+
 @lru_cache(maxsize=1)
 def get_llm() -> ChatOpenAI:
     return ChatOpenAI(
         model="gpt-4o-mini",
-        api_key=os.getenv("OPENAI_API_KEY"),
+        api_key=_get_api_key(),
         max_tokens=2048,
     )
 

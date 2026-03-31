@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 sessions/*.md
 !sessions/.gitkeep
+.streamlit/secrets.toml
