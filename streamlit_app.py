@@ -66,6 +66,8 @@ if "quiz_data" not in st.session_state:
     st.session_state.quiz_data = None
 if "awaiting_action" not in st.session_state:
     st.session_state.awaiting_action = False
+if "awaiting_save" not in st.session_state:
+    st.session_state.awaiting_save = False
 
 # --- Sidebar ---
 with st.sidebar:
@@ -110,10 +112,10 @@ if st.session_state.awaiting_action and st.session_state.app_state["mode"] == "c
     with col1:
         if st.button("수락"):
             st.session_state.awaiting_action = False
-            result = export_session(st.session_state.app_state)
+            st.session_state.awaiting_save = True
             st.session_state.messages.append({
                 "role": "assistant",
-                "content": f"세션이 저장되었습니다: `{result['export_path']}`\n\n수고하셨습니다!",
+                "content": "수고하셨습니다! 세션을 저장하시겠습니까?",
             })
             st.rerun()
     with col2:
@@ -128,6 +130,8 @@ if st.session_state.awaiting_action and st.session_state.app_state["mode"] == "c
         if st.button("재시도"):
             st.session_state.awaiting_action = False
             state = st.session_state.app_state.copy()
+            for key in ["diagnosis", "problem_type", "score", "strategy", "rewritten", "feedback", "error"]:
+                state[key] = None
             active_graph = (
                 create_parallel_coach_graph() if use_parallel else create_main_graph()
             )
@@ -141,6 +145,27 @@ if st.session_state.awaiting_action and st.session_state.app_state["mode"] == "c
                 {"role": "assistant", "content": response_text}
             )
             st.session_state.awaiting_action = True
+            st.rerun()
+
+# Save choice buttons (after accepting coaching result)
+if st.session_state.awaiting_save:
+    save_col1, save_col2 = st.columns(2)
+    with save_col1:
+        if st.button("저장하기"):
+            st.session_state.awaiting_save = False
+            result = export_session(st.session_state.app_state)
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": f"세션이 저장되었습니다: `{result['export_path']}`",
+            })
+            st.rerun()
+    with save_col2:
+        if st.button("저장하지 않기"):
+            st.session_state.awaiting_save = False
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": "저장 없이 종료합니다. 새 질문을 입력해주세요.",
+            })
             st.rerun()
 
 # Chat input

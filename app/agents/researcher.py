@@ -4,25 +4,25 @@ import json
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from app.llm import get_llm
+from app.llm import LLMError, invoke_llm, strip_code_fence
 from app.prompts.researcher_prompt import format_researcher_prompt
 from app.prompts.system_prompt import SYSTEM_PROMPT
 
 
 def research(state: dict) -> dict:
-    llm = get_llm()
     prompt = format_researcher_prompt(
         question=state["current_input"],
         context=state.get("context"),
     )
-    response = llm.invoke([
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=prompt),
-    ])
     try:
-        content = response.content.strip()
-        if content.startswith("```"):
-            content = content.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        content = invoke_llm([
+            SystemMessage(content=SYSTEM_PROMPT),
+            HumanMessage(content=prompt),
+        ])
+    except LLMError:
+        return {"research": {"examples": [], "framework": "조회 실패"}}
+    try:
+        content = strip_code_fence(content)
         data = json.loads(content)
         return {
             "research": {
@@ -34,6 +34,6 @@ def research(state: dict) -> dict:
         return {
             "research": {
                 "examples": [],
-                "framework": response.content.strip(),
+                "framework": content,
             }
         }

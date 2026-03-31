@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from typing import Optional
 
 from app.state import SessionState
 
 DEFAULT_OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "sessions")
 
 
-def export_session(state: SessionState, output_dir: str | None = None) -> dict:
+def export_session(state: SessionState, output_dir: Optional[str] = None) -> dict:
     output_dir = output_dir or DEFAULT_OUTPUT_DIR
     os.makedirs(output_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")

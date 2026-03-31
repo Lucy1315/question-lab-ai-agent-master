@@ -8,53 +8,49 @@ import pytest
 
 @pytest.fixture
 def mock_all_llms():
-    """Mock all LLM calls across the entire graph."""
+    """Mock all invoke_llm calls across the entire graph."""
     patches = [
-        patch("app.nodes.diagnoser.get_llm"),
-        patch("app.nodes.strategy.get_llm"),
-        patch("app.nodes.rewriter.get_llm"),
-        patch("app.nodes.feedback.get_llm"),
-        patch("app.agents.researcher.get_llm"),
-        patch("app.agents.quiz.get_llm"),
+        patch("app.nodes.diagnoser.invoke_llm"),
+        patch("app.nodes.strategy.invoke_llm"),
+        patch("app.nodes.rewriter.invoke_llm"),
+        patch("app.nodes.feedback.invoke_llm"),
+        patch("app.agents.researcher.invoke_llm"),
+        patch("app.agents.quiz.invoke_llm"),
     ]
     mocks = [p.start() for p in patches]
-    llm = MagicMock()
 
-    def side_effect(messages):
-        msg_content = str(messages[-1].content) if messages else ""
-        if "4가지 기준" in msg_content or "평가하라" in msg_content:
-            return MagicMock(content=json.dumps({
-                "diagnosis": "구체성이 부족합니다",
-                "problem_type": "specificity",
-                "score": 3,
-                "criteria_scores": {"specificity": 2, "context": 4, "answerability": 3, "scope": 5},
-            }))
-        elif "개선 전략" in msg_content:
-            return MagicMock(content="전략 1: 대상 특정\n예시: auth.py")
-        elif "리라이팅" in msg_content:
-            return MagicMock(content="리라이팅: auth.py 로그인 함수 보안 리뷰해줘\n변경 이유: 대상 구체화")
-        elif "피드백" in msg_content:
-            return MagicMock(content="강점: 의도 명확\n개선점: 대상 특정\n팁: 파일명 포함")
-        elif "사례" in msg_content or "프레임워크" in msg_content:
-            return MagicMock(content=json.dumps({
-                "examples": ["예시1", "예시2", "예시3"],
-                "framework": "5W1H",
-            }))
-        elif "퀴즈" in msg_content:
-            return MagicMock(content=json.dumps({
-                "bad_question": "알려줘",
-                "problem_type": "specificity",
-                "hint": "대상을 생각해보세요",
-                "answer": "대상 없음",
-                "good_version": "Python 리스트 정렬 방법 알려줘",
-            }))
-        else:
-            return MagicMock(content="기본 응답")
+    def diagnoser_side_effect(messages):
+        return json.dumps({
+            "diagnosis": "구체성이 부족합니다",
+            "problem_type": "specificity",
+            "score": 3,
+            "criteria_scores": {"specificity": 2, "context": 4, "answerability": 3, "scope": 5},
+        })
 
-    llm.invoke = MagicMock(side_effect=side_effect)
-    for m in mocks:
-        m.return_value = llm
-    yield llm
+    def researcher_side_effect(messages):
+        return json.dumps({
+            "examples": ["예시1", "예시2", "예시3"],
+            "framework": "5W1H",
+        })
+
+    def quiz_side_effect(messages):
+        return json.dumps({
+            "bad_question": "알려줘",
+            "problem_type": "specificity",
+            "hint": "대상을 생각해보세요",
+            "answer": "대상 없음",
+            "good_version": "Python 리스트 정렬 방법 알려줘",
+        })
+
+    # diagnoser, strategy, rewriter, feedback, researcher, quiz
+    mocks[0].side_effect = diagnoser_side_effect
+    mocks[1].return_value = "전략 1: 대상 특정\n예시: auth.py"
+    mocks[2].return_value = "리라이팅: auth.py 로그인 함수 보안 리뷰해줘\n변경 이유: 대상 구체화"
+    mocks[3].return_value = "강점: 의도 명확\n개선점: 대상 특정\n팁: 파일명 포함"
+    mocks[4].side_effect = researcher_side_effect
+    mocks[5].side_effect = quiz_side_effect
+
+    yield mocks
     for p in patches:
         p.stop()
 

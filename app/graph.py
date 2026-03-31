@@ -6,7 +6,6 @@ from app.agents.quiz import evaluate_quiz, generate_quiz
 from app.agents.researcher import research
 from app.agents.supervisor import route_to_agent
 from app.nodes.diagnoser import diagnose
-from app.nodes.export import export_session
 from app.nodes.feedback import give_feedback
 from app.nodes.parser import parse_input
 from app.nodes.rewriter import rewrite_question
@@ -19,7 +18,6 @@ def create_main_graph():
     graph = StateGraph(SessionState)
 
     graph.add_node("parser", parse_input)
-    graph.add_node("export", export_session)
     graph.add_node("diagnoser", diagnose)
     graph.add_node("researcher", research)
     graph.add_node("strategy", suggest_strategy)
@@ -36,6 +34,7 @@ def create_main_graph():
             "tutor": "diagnoser",
             "quiz": "quiz_generate",
             "researcher": "researcher",
+            "end": END,
         },
     )
 
@@ -55,13 +54,24 @@ def create_main_graph():
     graph.add_edge("quiz_generate", END)
     graph.add_edge("quiz_evaluate", END)
     graph.add_edge("researcher", END)
-    graph.add_edge("export", END)
-
     return graph.compile()
 
 
+def _route_parallel_parser(state: dict) -> str:
+    if state.get("error"):
+        return "end"
+    return "fan_out"
+
+
 def create_parallel_coach_graph():
-    """Coach graph with parallel diagnoser + researcher (fan-out/fan-in)."""
+    """Coach graph with parallel diagnoser + researcher (fan-out/fan-in).
+
+    Parser fans out to both diagnoser and researcher simultaneously.
+    Both join at a merge node, then diagnoser's routing logic drives
+    the downstream pipeline (strategy/rewriter/feedback).
+    Researcher only contributes research data to state — it does not
+    alter the diagnoser's routing path.
+    """
     graph = StateGraph(SessionState)
 
     graph.add_node("parser", parse_input)
@@ -72,9 +82,17 @@ def create_parallel_coach_graph():
     graph.add_node("feedback", give_feedback)
 
     graph.set_entry_point("parser")
-    graph.add_edge("parser", "diagnoser")
+    # Fan-out: parser → diagnoser AND parser → researcher in parallel
+    graph.add_conditional_edges(
+        "parser",
+        _route_parallel_parser,
+        {"fan_out": "diagnoser", "end": END},
+    )
     graph.add_edge("parser", "researcher")
-    graph.add_edge("researcher", "strategy")
+    # Researcher writes research data to state and ends its branch.
+    # Strategy node reads state["research"] if available.
+    graph.add_edge("researcher", END)
+    # Diagnoser routing drives the downstream pipeline
     graph.add_conditional_edges(
         "diagnoser",
         route_by_problem_type,

@@ -33,8 +33,10 @@ def ai_judge(original: str, rewritten: str, diagnosis: str, llm) -> dict:
     response = llm.invoke([HumanMessage(content=prompt)])
     try:
         content = response.content.strip()
-        if content.startswith("```"):
-            content = content.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        import re
+        m = re.match(r"^```\w*\n(.*?)```$", content, re.DOTALL)
+        if m:
+            content = m.group(1).strip()
         return json.loads(content)
     except (json.JSONDecodeError, KeyError):
         return {"overall": 0, "reasoning": "Failed to parse judge response"}
@@ -100,9 +102,8 @@ def test_judge_code_review_question(judge_llm):
 
 
 @pytest.mark.skipif(
-    not __import__("os").getenv("ANTHROPIC_API_KEY")
-    or __import__("os").getenv("ANTHROPIC_API_KEY") == "sk-ant-your-key-here",
-    reason="ANTHROPIC_API_KEY not set — skip live AI judge test",
+    not __import__("os").getenv("OPENAI_API_KEY"),
+    reason="OPENAI_API_KEY not set — skip live AI judge test",
 )
 def test_judge_live_integration():
     """Live test with real LLM — only runs when API key is available."""

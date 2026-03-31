@@ -8,5 +8,7 @@ AGENT_ROUTE_MAP = {
 
 
 def route_to_agent(state: dict) -> str:
+    if state.get("error"):
+        return "end"
     mode = state.get("mode", "coach")
     return AGENT_ROUTE_MAP.get(mode, "tutor")

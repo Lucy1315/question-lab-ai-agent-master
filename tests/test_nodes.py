@@ -25,10 +25,22 @@ def test_session_state_creation():
         "user_decision": "",
         "research": None,
         "quiz_history": None,
+        "diagnosis": None,
+        "problem_type": None,
+        "score": None,
+        "strategy": None,
+        "rewritten": None,
+        "feedback": None,
+        "error": None,
+        "quiz_data": None,
+        "quiz_evaluation": None,
+        "user_answer": None,
+        "export_path": None,
     }
     assert state["mode"] == "coach"
     assert state["attempts"] == []
     assert state["research"] is None
+    assert state["diagnosis"] is None
 
 
 def test_research_result_creation():
@@ -103,28 +115,22 @@ from app.nodes.feedback import give_feedback
 
 
 @pytest.fixture
-def mock_llm():
-    with patch("app.nodes.diagnoser.get_llm") as d_mock, \
-         patch("app.nodes.strategy.get_llm") as s_mock, \
-         patch("app.nodes.rewriter.get_llm") as r_mock, \
-         patch("app.nodes.feedback.get_llm") as f_mock:
-        llm = MagicMock()
-        d_mock.return_value = llm
-        s_mock.return_value = llm
-        r_mock.return_value = llm
-        f_mock.return_value = llm
-        yield llm
+def mock_invoke():
+    with patch("app.nodes.diagnoser.invoke_llm") as d_mock, \
+         patch("app.nodes.strategy.invoke_llm") as s_mock, \
+         patch("app.nodes.rewriter.invoke_llm") as r_mock, \
+         patch("app.nodes.feedback.invoke_llm") as f_mock:
+        mocks = {"diagnoser": d_mock, "strategy": s_mock, "rewriter": r_mock, "feedback": f_mock}
+        yield mocks
 
 
-def test_diagnoser_returns_valid_json(mock_llm):
-    mock_llm.invoke.return_value = MagicMock(
-        content=json.dumps({
-            "diagnosis": "구체성이 부족합니다",
-            "problem_type": "specificity",
-            "score": 3,
-            "criteria_scores": {"specificity": 2, "context": 4, "answerability": 3, "scope": 5},
-        })
-    )
+def test_diagnoser_returns_valid_json(mock_invoke):
+    mock_invoke["diagnoser"].return_value = json.dumps({
+        "diagnosis": "구체성이 부족합니다",
+        "problem_type": "specificity",
+        "score": 3,
+        "criteria_scores": {"specificity": 2, "context": 4, "answerability": 3, "scope": 5},
+    })
     state = {
         "current_input": "코드 리뷰해줘",
         "context": None,
@@ -140,15 +146,13 @@ def test_diagnoser_returns_valid_json(mock_llm):
     assert "diagnosis" in result
 
 
-def test_diagnoser_score_range(mock_llm):
-    mock_llm.invoke.return_value = MagicMock(
-        content=json.dumps({
-            "diagnosis": "좋은 질문입니다",
-            "problem_type": "good",
-            "score": 8,
-            "criteria_scores": {"specificity": 8, "context": 7, "answerability": 9, "scope": 8},
-        })
-    )
+def test_diagnoser_score_range(mock_invoke):
+    mock_invoke["diagnoser"].return_value = json.dumps({
+        "diagnosis": "좋은 질문입니다",
+        "problem_type": "good",
+        "score": 8,
+        "criteria_scores": {"specificity": 8, "context": 7, "answerability": 9, "scope": 8},
+    })
     state = {
         "current_input": "Python 리스트 컴프리헨션의 메모리 사용량을 제너레이터와 비교 설명해줘",
         "context": "파이썬 학습 중",
@@ -162,10 +166,8 @@ def test_diagnoser_score_range(mock_llm):
     assert 1 <= result["score"] <= 10
 
 
-def test_strategy_actionable(mock_llm):
-    mock_llm.invoke.return_value = MagicMock(
-        content="전략 1: 리뷰 대상을 특정 파일로 좁히세요\n예시: auth.py의 login 함수"
-    )
+def test_strategy_actionable(mock_invoke):
+    mock_invoke["strategy"].return_value = "전략 1: 리뷰 대상을 특정 파일로 좁히세요\n예시: auth.py의 login 함수"
     state = {
         "current_input": "코드 리뷰해줘",
         "context": None,
@@ -178,10 +180,8 @@ def test_strategy_actionable(mock_llm):
     assert len(result["strategy"]) > 0
 
 
-def test_rewriter_preserves_intent(mock_llm):
-    mock_llm.invoke.return_value = MagicMock(
-        content="리라이팅: auth.py의 로그인 함수를 보안 관점에서 리뷰해줘\n변경 이유: 대상과 관점을 구체화"
-    )
+def test_rewriter_preserves_intent(mock_invoke):
+    mock_invoke["rewriter"].return_value = "리라이팅: auth.py의 로그인 함수를 보안 관점에서 리뷰해줘\n변경 이유: 대상과 관점을 구체화"
     state = {
         "current_input": "코드 리뷰해줘",
         "context": None,
@@ -193,10 +193,8 @@ def test_rewriter_preserves_intent(mock_llm):
     assert len(result["rewritten"]) > 0
 
 
-def test_feedback_has_score(mock_llm):
-    mock_llm.invoke.return_value = MagicMock(
-        content="강점: 의도가 명확합니다\n개선점: 대상 특정 필요\n팁: 파일명을 포함해보세요"
-    )
+def test_feedback_has_score(mock_invoke):
+    mock_invoke["feedback"].return_value = "강점: 의도가 명확합니다\n개선점: 대상 특정 필요\n팁: 파일명을 포함해보세요"
     state = {
         "current_input": "코드 리뷰해줘",
         "diagnosis": "구체성 부족",
