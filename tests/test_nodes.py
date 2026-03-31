@@ -37,3 +37,56 @@ def test_research_result_creation():
         "framework": "5W1H 프레임워크",
     }
     assert len(result["examples"]) == 3
+
+
+from app.nodes.parser import parse_input
+from app.nodes.router import route_by_problem_type
+
+
+def test_parser_empty_input():
+    state = {
+        "current_input": "",
+        "context": None,
+        "mode": "coach",
+        "attempts": [],
+        "user_decision": "",
+        "research": None,
+        "quiz_history": None,
+    }
+    result = parse_input(state)
+    assert result["current_input"] == ""
+    assert result.get("error") == "empty_input"
+
+
+def test_parser_normalizes():
+    state = {
+        "current_input": "  코드 리뷰해줘  \n ",
+        "context": None,
+        "mode": "coach",
+        "attempts": [],
+        "user_decision": "",
+        "research": None,
+        "quiz_history": None,
+    }
+    result = parse_input(state)
+    assert result["current_input"] == "코드 리뷰해줘"
+
+
+def test_router_specificity():
+    result = route_by_problem_type({"problem_type": "specificity"})
+    assert result == "strategy"
+
+
+def test_router_structure():
+    result = route_by_problem_type({"problem_type": "structure"})
+    assert result == "rewriter"
+
+
+def test_router_both():
+    result = route_by_problem_type({"problem_type": "both"})
+    assert result == "strategy"
+
+
+def test_router_good():
+    result = route_by_problem_type({"problem_type": "good"})
+    assert result == "feedback"
