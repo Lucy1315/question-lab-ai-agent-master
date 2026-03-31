@@ -212,3 +212,44 @@ def test_feedback_has_score(mock_llm):
     assert "attempts" in result
     assert len(result["attempts"]) == 1
     assert result["attempts"][0]["score"] == 3
+
+
+import os
+import tempfile
+from app.nodes.export import export_session
+
+
+def test_export_creates_file():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        state = {
+            "context": "AI 챗봇에게 질문할 때",
+            "attempts": [
+                {
+                    "question": "코드 리뷰해줘",
+                    "diagnosis": "구체성 부족",
+                    "problem_type": "specificity",
+                    "strategy": "대상 특정",
+                    "rewritten": "auth.py 리뷰해줘",
+                    "score": 3,
+                    "feedback": "대상을 특정하세요",
+                },
+                {
+                    "question": "auth.py 로그인 함수 보안 리뷰해줘",
+                    "diagnosis": "좋은 질문",
+                    "problem_type": "good",
+                    "strategy": None,
+                    "rewritten": None,
+                    "score": 7,
+                    "feedback": "좋습니다",
+                },
+            ],
+        }
+        result = export_session(state, output_dir=tmpdir)
+        assert result["export_path"]
+        assert os.path.exists(result["export_path"])
+        with open(result["export_path"], "r") as f:
+            content = f.read()
+        assert "코드 리뷰해줘" in content
+        assert "3/10" in content
+        assert "7/10" in content
+        assert "3 -> 7" in content
