@@ -1,10 +1,12 @@
 import os
 from functools import lru_cache
+from pathlib import Path
 
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
-load_dotenv()
+_ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(_ENV_PATH, override=True)
 
 
 def _get_api_key() -> str:
@@ -13,10 +15,16 @@ def _get_api_key() -> str:
     if not key:
         try:
             import streamlit as st
-            key = st.secrets.get("OPENAI_API_KEY")
+            if "OPENAI_API_KEY" in st.secrets:
+                key = st.secrets["OPENAI_API_KEY"]
         except Exception:
             pass
-    return key or ""
+    if not key:
+        raise RuntimeError(
+            "OPENAI_API_KEY not found. "
+            "Set it in .env or Streamlit Cloud Secrets."
+        )
+    return key
 
 
 @lru_cache(maxsize=1)
