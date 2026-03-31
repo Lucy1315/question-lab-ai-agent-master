@@ -1,0 +1,213 @@
+from __future__ import annotations
+
+import pandas as pd
+import streamlit as st
+
+from app.agents.quiz import evaluate_quiz
+from app.graph import create_main_graph, create_parallel_coach_graph
+from app.nodes.export import export_session
+
+
+def _format_coaching_result(attempt: dict, all_attempts: list) -> str:
+    score = attempt["score"]
+    score_diff = ""
+    if len(all_attempts) > 1:
+        prev = all_attempts[-2]["score"]
+        diff = score - prev
+        if diff > 0:
+            score_diff = f" +{diff}점"
+        elif diff < 0:
+            score_diff = f" {diff}점"
+
+    parts = [
+        f"### 진단 결과 ({score}/10점){score_diff}",
+        f"**문제 유형:** {attempt['problem_type']}",
+        f"\n{attempt['diagnosis']}",
+    ]
+    if attempt.get("strategy"):
+        parts.append(f"\n### 개선 전략\n{attempt['strategy']}")
+    if attempt.get("rewritten"):
+        parts.append(f"\n### 리라이팅 제안\n> {attempt['rewritten']}")
+    parts.append(f"\n### 피드백\n{attempt['feedback']}")
+    return "\n".join(parts)
+
+
+def _get_default_state() -> dict:
+    return {
+        "context": None,
+        "mode": "coach",
+        "attempts": [],
+        "current_input": "",
+        "user_decision": "",
+        "research": None,
+        "quiz_history": None,
+        "diagnosis": None,
+        "problem_type": None,
+        "score": None,
+        "strategy": None,
+        "rewritten": None,
+        "feedback": None,
+        "error": None,
+        "quiz_data": None,
+        "quiz_evaluation": None,
+        "user_answer": None,
+        "export_path": None,
+    }
+
+
+st.set_page_config(page_title="좋은 질문 연습실", page_icon="💡", layout="wide")
+
+# Initialize session state
+if "app_state" not in st.session_state:
+    st.session_state.app_state = _get_default_state()
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "quiz_data" not in st.session_state:
+    st.session_state.quiz_data = None
+if "awaiting_action" not in st.session_state:
+    st.session_state.awaiting_action = False
+
+# --- Sidebar ---
+with st.sidebar:
+    st.title("설정")
+    mode = st.radio("모드 선택", ["코칭", "퀴즈", "사례 검색"], index=0)
+    mode_map = {"코칭": "coach", "퀴즈": "quiz", "사례 검색": "research"}
+    st.session_state.app_state["mode"] = mode_map[mode]
+
+    context = st.text_input(
+        "질문 사용 맥락 (선택)",
+        value=st.session_state.app_state.get("context") or "",
+    )
+    st.session_state.app_state["context"] = context if context else None
+
+    use_parallel = st.checkbox("병렬 처리 (Researcher + Diagnoser)", value=False)
+
+    # Score chart
+    attempts = st.session_state.app_state.get("attempts", [])
+    if attempts:
+        st.subheader("점수 변화")
+        scores = [a["score"] for a in attempts]
+        df = pd.DataFrame({"시도": range(1, len(scores) + 1), "점수": scores})
+        st.line_chart(df.set_index("시도"))
+
+    # Export button
+    if attempts:
+        if st.button("세션 저장"):
+            result = export_session(st.session_state.app_state)
+            st.success(f"저장됨: {result['export_path']}")
+
+# --- Main Area ---
+st.title("💡 좋은 질문 연습실 (Question Lab)")
+
+# Display chat messages
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+# Action buttons (after coaching result)
+if st.session_state.awaiting_action and st.session_state.app_state["mode"] == "coach":
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("수락"):
+            st.session_state.awaiting_action = False
+            result = export_session(st.session_state.app_state)
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": f"세션이 저장되었습니다: `{result['export_path']}`\n\n수고하셨습니다!",
+            })
+            st.rerun()
+    with col2:
+        if st.button("수정"):
+            st.session_state.awaiting_action = False
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": "수정된 질문을 입력해주세요.",
+            })
+            st.rerun()
+    with col3:
+        if st.button("재시도"):
+            st.session_state.awaiting_action = False
+            state = st.session_state.app_state.copy()
+            active_graph = (
+                create_parallel_coach_graph() if use_parallel else create_main_graph()
+            )
+            result = active_graph.invoke(state)
+            st.session_state.app_state["attempts"] = result.get(
+                "attempts", state["attempts"]
+            )
+            last_attempt = result["attempts"][-1]
+            response_text = _format_coaching_result(last_attempt, result["attempts"])
+            st.session_state.messages.append(
+                {"role": "assistant", "content": response_text}
+            )
+            st.session_state.awaiting_action = True
+            st.rerun()
+
+# Chat input
+if prompt := st.chat_input("질문을 입력하세요"):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+
+    current_mode = st.session_state.app_state["mode"]
+    state = st.session_state.app_state.copy()
+    state["current_input"] = prompt
+
+    if current_mode == "coach":
+        active_graph = (
+            create_parallel_coach_graph() if use_parallel else create_main_graph()
+        )
+        result = active_graph.invoke(state)
+        st.session_state.app_state["attempts"] = result.get(
+            "attempts", state["attempts"]
+        )
+        st.session_state.app_state["research"] = result.get("research")
+        last_attempt = result["attempts"][-1]
+        response_text = _format_coaching_result(last_attempt, result["attempts"])
+        st.session_state.awaiting_action = True
+
+    elif current_mode == "quiz":
+        if st.session_state.quiz_data is None:
+            result = create_main_graph().invoke(state)
+            st.session_state.quiz_data = result.get("quiz_data")
+            qd = st.session_state.quiz_data
+            response_text = (
+                f"**퀴즈 문제**\n\n"
+                f"다음 질문의 문제점은 무엇일까요?\n\n"
+                f"> {qd['bad_question']}\n\n"
+                f"힌트: {qd['hint']}"
+            )
+        else:
+            eval_state = {
+                **state,
+                "quiz_data": st.session_state.quiz_data,
+                "user_answer": prompt,
+            }
+            eval_result = evaluate_quiz(eval_state)
+            st.session_state.app_state["quiz_history"] = eval_result.get(
+                "quiz_history"
+            )
+            qd = st.session_state.quiz_data
+            response_text = (
+                f"**평가 결과**\n\n"
+                f"{eval_result['quiz_evaluation']}\n\n"
+                f"---\n"
+                f"**좋은 질문 예시:** {qd['good_version']}"
+            )
+            st.session_state.quiz_data = None
+
+    elif current_mode == "research":
+        result = create_main_graph().invoke(state)
+        research_data = result.get("research")
+        if research_data and research_data.get("examples"):
+            examples_str = "\n".join(f"- {e}" for e in research_data["examples"])
+            response_text = (
+                f"**좋은 질문 사례**\n\n{examples_str}\n\n"
+                f"**추천 프레임워크:** {research_data['framework']}"
+            )
+        else:
+            response_text = "사례를 생성하지 못했습니다. 다시 시도해주세요."
+        st.session_state.app_state["research"] = research_data
+    else:
+        response_text = "알 수 없는 모드입니다."
+
+    st.session_state.messages.append({"role": "assistant", "content": response_text})
+    st.rerun()
