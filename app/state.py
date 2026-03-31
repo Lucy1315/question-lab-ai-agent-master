@@ -26,3 +26,9 @@ class SessionState(TypedDict):
     user_decision: str  # "accept" | "edit" | "retry"
     research: Optional[ResearchResult]
     quiz_history: Optional[List[dict]]
+    # transient fields set by diagnoser and consumed by downstream nodes
+    diagnosis: Optional[str]
+    problem_type: Optional[str]
+    score: Optional[int]
+    strategy: Optional[str]
+    rewritten: Optional[str]
