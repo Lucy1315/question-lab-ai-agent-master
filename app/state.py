@@ -32,3 +32,11 @@ class SessionState(TypedDict):
     score: Optional[int]
     strategy: Optional[str]
     rewritten: Optional[str]
+    feedback: Optional[str]
+    error: Optional[str]
+    # quiz fields
+    quiz_data: Optional[dict]
+    quiz_evaluation: Optional[str]
+    user_answer: Optional[str]
+    # export field
+    export_path: Optional[str]

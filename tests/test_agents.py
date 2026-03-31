@@ -59,3 +59,72 @@ def test_tutor_full_loop(mock_llm_for_agents):
     assert result["attempts"][0]["score"] == 3
     assert result["attempts"][0]["problem_type"] == "specificity"
     assert result["attempts"][0]["feedback"]
+
+
+def test_researcher_returns_examples():
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = MagicMock(
+        content=json.dumps({
+            "examples": [
+                "auth.py의 로그인 함수에서 SQL injection 취약점이 있는지 리뷰해줘",
+                "session 만료 처리 로직이 OWASP 가이드라인에 맞는지 확인해줘",
+                "비밀번호 해싱에 bcrypt 대신 sha256을 쓰고 있는데 보안상 문제가 있는지 알려줘",
+            ],
+            "framework": "OWASP 보안 코드 리뷰 체크리스트",
+        })
+    )
+    with patch("app.agents.researcher.get_llm", return_value=mock_llm):
+        from app.agents.researcher import research
+
+        state = {
+            "current_input": "코드 리뷰해줘",
+            "context": "보안 코드 리뷰",
+        }
+        result = research(state)
+        assert result["research"] is not None
+        assert len(result["research"]["examples"]) == 3
+        assert result["research"]["framework"]
+
+
+def test_quiz_generates_question():
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = MagicMock(
+        content=json.dumps({
+            "bad_question": "알려줘",
+            "problem_type": "specificity",
+            "hint": "무엇을 알려달라는 건지 생각해보세요",
+            "answer": "대상과 범위가 전혀 없는 질문입니다",
+            "good_version": "Python의 리스트 컴프리헨션 문법을 예시와 함께 설명해줘",
+        })
+    )
+    with patch("app.agents.quiz.get_llm", return_value=mock_llm):
+        from app.agents.quiz import generate_quiz
+
+        state = {"context": None}
+        result = generate_quiz(state)
+        assert result["quiz_data"]["bad_question"]
+        assert result["quiz_data"]["problem_type"] in ("specificity", "structure", "both")
+        assert result["quiz_data"]["answer"]
+        assert result["quiz_data"]["good_version"]
+
+
+def test_supervisor_routes_correctly():
+    from app.agents.supervisor import route_to_agent
+
+    assert route_to_agent({"mode": "coach"}) == "tutor"
+    assert route_to_agent({"mode": "quiz"}) == "quiz"
+    assert route_to_agent({"mode": "research"}) == "researcher"
+
+
+def test_main_graph_compiles(mock_llm_for_agents):
+    from app.graph import create_main_graph
+
+    graph = create_main_graph()
+    assert graph is not None
+
+
+def test_parallel_graph_compiles(mock_llm_for_agents):
+    from app.graph import create_parallel_coach_graph
+
+    graph = create_parallel_coach_graph()
+    assert graph is not None
