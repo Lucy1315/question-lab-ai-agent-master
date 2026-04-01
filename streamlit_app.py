@@ -113,6 +113,15 @@ with st.sidebar:
         df = pd.DataFrame({"시도": range(1, len(scores) + 1), "점수": scores})
         st.line_chart(df.set_index("시도"))
 
+    # Reset button
+    if st.button("새로고침"):
+        st.session_state.app_state = _get_default_state()
+        st.session_state.messages = []
+        st.session_state.quiz_data = None
+        st.session_state.awaiting_action = False
+        st.session_state.awaiting_save = False
+        st.rerun()
+
     # Export button
     if attempts:
         if st.button("세션 저장"):
