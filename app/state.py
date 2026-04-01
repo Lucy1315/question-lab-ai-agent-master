@@ -11,6 +11,8 @@ class Attempt(TypedDict):
     rewritten: Optional[str]
     score: int
     feedback: str
+    example_current: Optional[str]
+    example_improved: Optional[str]
 
 
 class ResearchResult(TypedDict):
