@@ -84,6 +84,27 @@ with st.sidebar:
 
     use_parallel = st.checkbox("병렬 처리 (Researcher + Diagnoser)", value=False)
 
+    st.divider()
+    with st.expander("사용방법"):
+        st.markdown(
+            "**1. 코칭 모드**\n\n"
+            "질문을 입력하면 AI가 진단 → 개선 전략 → 리라이팅을 제안합니다.\n\n"
+            '예시: *"이 프로젝트 어떻게 해야 하나요?"*\n\n'
+            "→ 진단: 범위가 너무 넓고 구체적 맥락이 없음 (4/10점)\n\n"
+            '→ 리라이팅: *"React 프론트엔드에서 API 응답 지연을 줄이려면 '
+            '어떤 캐싱 전략이 효과적인가요?"*\n\n'
+            "---\n\n"
+            "**2. 퀴즈 모드**\n\n"
+            "AI가 나쁜 질문 예시를 보여주고, 문제점을 맞춰보는 퀴즈를 출제합니다.\n\n"
+            '예시: *"이거 왜 안 돼요?"* → 문제점은 무엇일까요?\n\n'
+            "---\n\n"
+            "**3. 사례 검색 모드**\n\n"
+            "주제를 입력하면 좋은 질문 사례와 프레임워크를 추천합니다.\n\n"
+            '예시: *"면접 질문"* → 관련 좋은 질문 사례 + 추천 프레임워크\n\n'
+            "---\n\n"
+            "'질문 사용 맥락'을 입력하면 더 정확한 코칭을 받을 수 있습니다."
+        )
+
     # Score chart
     attempts = st.session_state.app_state.get("attempts", [])
     if attempts:
