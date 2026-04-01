@@ -62,15 +62,63 @@ Streamlit Community Cloud에 배포되어 있습니다.
 3. Main file: `streamlit_app.py`
 4. Secrets에 `OPENAI_API_KEY` 설정
 
-## 워크플로우 (코칭 모드)
+## LangGraph Node Flow
 
-```
-입력 → Parser → Diagnoser → Router → Strategy → Rewriter → Feedback → 결과 출력
+### 메인 그래프 (Supervisor 라우팅)
+
+```mermaid
+graph TD
+    A[사용자 입력] --> B[Parser]
+    B --> C{Supervisor<br/>route_to_agent}
+    C -->|tutor| D[Diagnoser]
+    C -->|quiz| E[Quiz Generate]
+    C -->|researcher| F[Researcher]
+    C -->|end| Z[END]
+
+    D --> G{Router<br/>route_by_problem_type}
+    G -->|strategy| H[Strategy]
+    G -->|rewriter| I[Rewriter]
+    G -->|feedback| J[Feedback]
+
+    H --> I
+    I --> J
+    J --> Z
+
+    E --> Z
+    F --> Z
 ```
 
-- **Parser:** 사용자 질문 분석
-- **Diagnoser:** 질문 품질 진단 및 점수 산출
-- **Router:** 문제 유형에 따라 전략 분기
-- **Strategy:** 개선 전략 수립
-- **Rewriter:** 질문 리라이팅
-- **Feedback:** 종합 피드백 생성
+### 병렬 코칭 그래프 (Fan-out / Fan-in)
+
+```mermaid
+graph TD
+    A[사용자 입력] --> B[Parser]
+    B -->|fan_out| D[Diagnoser]
+    B -->|parallel| F[Researcher]
+
+    F --> Z[END]
+
+    D --> G{Router<br/>route_by_problem_type}
+    G -->|strategy| H[Strategy]
+    G -->|rewriter| I[Rewriter]
+    G -->|feedback| J[Feedback]
+
+    H --> I
+    I --> J
+    J --> Z
+```
+
+### 노드 설명
+
+| 노드 | 역할 |
+|------|------|
+| **Parser** | 사용자 질문을 분석하고 모드별로 라우팅할 상태 준비 |
+| **Supervisor** | 모드(coach/quiz/research)에 따라 적절한 에이전트로 분기 |
+| **Diagnoser** | 질문 품질을 진단하고 10점 만점으로 점수 산출 |
+| **Router** | 문제 유형에 따라 Strategy/Rewriter/Feedback으로 분기 |
+| **Strategy** | 질문 개선 전략 수립 |
+| **Rewriter** | 진단과 전략을 바탕으로 질문 리라이팅 |
+| **Feedback** | 전체 과정을 종합한 피드백 생성 |
+| **Researcher** | 주제 관련 좋은 질문 사례와 프레임워크 검색 |
+| **Quiz Generate** | 나쁜 질문 예시와 퀴즈 출제 |
+| **Quiz Evaluate** | 사용자의 퀴즈 답변 평가 |
