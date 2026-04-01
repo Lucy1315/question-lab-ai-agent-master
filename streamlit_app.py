@@ -29,6 +29,20 @@ def _format_coaching_result(attempt: dict, all_attempts: list) -> str:
     if attempt.get("rewritten"):
         parts.append(f"\n### 리라이팅 제안\n> {attempt['rewritten']}")
     parts.append(f"\n### 피드백\n{attempt['feedback']}")
+
+    if attempt.get("example_current"):
+        parts.append("\n---\n### 이 질문으로 받을 수 있는 답변")
+        parts.append(
+            f"\n**⚠️ 현재 질문 ({score}점)**\n"
+            f"> {attempt['example_current']}"
+        )
+        if attempt.get("example_improved"):
+            parts.append(
+                f"\n▼ 리라이팅 후 ▼\n"
+                f"\n**✅ 개선된 질문**\n"
+                f"> {attempt['example_improved']}"
+            )
+
     return "\n".join(parts)
 
 
@@ -207,10 +221,12 @@ if prompt := st.chat_input("질문을 입력하세요"):
     state["current_input"] = prompt
 
     if current_mode == "coach":
-        active_graph = (
-            create_parallel_coach_graph() if use_parallel else create_main_graph()
-        )
-        result = active_graph.invoke(state)
+        with st.chat_message("assistant"):
+            with st.spinner("질문을 분석하고 있습니다..."):
+                active_graph = (
+                    create_parallel_coach_graph() if use_parallel else create_main_graph()
+                )
+                result = active_graph.invoke(state)
         st.session_state.app_state["attempts"] = result.get(
             "attempts", state["attempts"]
         )
@@ -220,37 +236,41 @@ if prompt := st.chat_input("질문을 입력하세요"):
         st.session_state.awaiting_action = True
 
     elif current_mode == "quiz":
-        if st.session_state.quiz_data is None:
-            result = create_main_graph().invoke(state)
-            st.session_state.quiz_data = result.get("quiz_data")
-            qd = st.session_state.quiz_data
-            response_text = (
-                f"**퀴즈 문제**\n\n"
-                f"다음 질문의 문제점은 무엇일까요?\n\n"
-                f"> {qd['bad_question']}\n\n"
-                f"힌트: {qd['hint']}"
-            )
-        else:
-            eval_state = {
-                **state,
-                "quiz_data": st.session_state.quiz_data,
-                "user_answer": prompt,
-            }
-            eval_result = evaluate_quiz(eval_state)
-            st.session_state.app_state["quiz_history"] = eval_result.get(
-                "quiz_history"
-            )
-            qd = st.session_state.quiz_data
-            response_text = (
-                f"**평가 결과**\n\n"
-                f"{eval_result['quiz_evaluation']}\n\n"
-                f"---\n"
-                f"**좋은 질문 예시:** {qd['good_version']}"
-            )
-            st.session_state.quiz_data = None
+        with st.chat_message("assistant"):
+            with st.spinner("퀴즈를 준비하고 있습니다..."):
+                if st.session_state.quiz_data is None:
+                    result = create_main_graph().invoke(state)
+                    st.session_state.quiz_data = result.get("quiz_data")
+                    qd = st.session_state.quiz_data
+                    response_text = (
+                        f"**퀴즈 문제**\n\n"
+                        f"다음 질문의 문제점은 무엇일까요?\n\n"
+                        f"> {qd['bad_question']}\n\n"
+                        f"힌트: {qd['hint']}"
+                    )
+                else:
+                    eval_state = {
+                        **state,
+                        "quiz_data": st.session_state.quiz_data,
+                        "user_answer": prompt,
+                    }
+                    eval_result = evaluate_quiz(eval_state)
+                    st.session_state.app_state["quiz_history"] = eval_result.get(
+                        "quiz_history"
+                    )
+                    qd = st.session_state.quiz_data
+                    response_text = (
+                        f"**평가 결과**\n\n"
+                        f"{eval_result['quiz_evaluation']}\n\n"
+                        f"---\n"
+                        f"**좋은 질문 예시:** {qd['good_version']}"
+                    )
+                    st.session_state.quiz_data = None
 
     elif current_mode == "research":
-        result = create_main_graph().invoke(state)
+        with st.chat_message("assistant"):
+            with st.spinner("사례를 검색하고 있습니다..."):
+                result = create_main_graph().invoke(state)
         research_data = result.get("research")
         if research_data and research_data.get("examples"):
             examples_str = "\n".join(f"- {e}" for e in research_data["examples"])
