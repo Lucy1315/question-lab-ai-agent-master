@@ -222,6 +222,9 @@ if st.session_state.awaiting_save:
 if prompt := st.chat_input("질문을 입력하세요"):
     st.session_state.messages.append({"role": "user", "content": prompt})
 
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
     current_mode = st.session_state.app_state["mode"]
     state = st.session_state.app_state.copy()
     state["current_input"] = prompt
