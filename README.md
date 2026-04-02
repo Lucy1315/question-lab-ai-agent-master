@@ -2,6 +2,17 @@
 
 AI 기반 질문 코칭 에이전트입니다. 사용자의 질문을 진단하고, 개선 전략을 제안하며, 더 좋은 질문으로 리라이팅해줍니다.
 
+**배포 링크:** https://question-lab.streamlit.app
+
+## 사용 방법
+
+1. 앱에 접속하면 채팅 입력창이 나타납니다
+2. 사이드바에서 원하는 모드를 선택합니다 (코칭 / 퀴즈 / 사례 검색)
+3. 채팅창에 질문을 입력하면 입력한 질문이 말풍선으로 표시되고, AI가 분석을 시작합니다
+4. **코칭 모드:** 진단 결과(점수, 문제 유형, 개선 전략, 리라이팅)가 표시되면 [수락] [수정] [재시도] 중 선택
+5. **퀴즈 모드:** 나쁜 질문 예시가 출제되면 문제점을 답변으로 입력
+6. **사례 검색 모드:** 주제를 입력하면 좋은 질문 사례와 프레임워크를 추천
+
 ## 주요 기능
 
 | 모드 | 설명 |
@@ -55,12 +66,11 @@ python main.py
 
 ## 배포
 
-Streamlit Community Cloud에 배포되어 있습니다.
+Streamlit Community Cloud에 배포되어 있습니다: https://question-lab.streamlit.app
 
-1. [share.streamlit.io](https://share.streamlit.io)에서 GitHub 연결
-2. Repository: `Lucy1315/question-lab-ai-agent-master`
-3. Main file: `streamlit_app.py`
-4. Secrets에 `OPENAI_API_KEY` 설정
+- Repository: `Lucy1315/question-lab-ai-agent-master`
+- Main file: `streamlit_app.py`
+- Secrets에 `OPENAI_API_KEY` 설정 필요
 
 ## LangGraph Node Flow
 
