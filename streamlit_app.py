@@ -120,6 +120,40 @@ def _render_quiz_result(quiz_evaluation: str, quiz_data: dict):
     </div>''', unsafe_allow_html=True)
 
 
+def _render_research_card(research_data: dict, topic: str):
+    """사례 검색 결과 카드를 스타일링하여 표시"""
+    examples = research_data.get("examples", [])
+    framework = research_data.get("framework", "")
+
+    examples_html = ""
+    for i, ex in enumerate(examples):
+        examples_html += f'''
+        <div style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; background:#161B22; border-radius:6px; border:1px solid #21262D; margin-bottom:6px;">
+            <span style="background:rgba(31,111,235,0.2); color:#58A6FF; font-size:10px; font-weight:700; min-width:20px; height:20px; border-radius:5px; display:flex; align-items:center; justify-content:center;">{i+1}</span>
+            <span style="color:#D1D5DB; font-size:12px; line-height:1.5;">{ex}</span>
+        </div>'''
+
+    st.markdown(f'''
+    <div style="background:#161B22; border:1px solid #21262D; border-radius:12px; overflow:hidden;">
+        <div style="background:#1C2128; padding:14px 18px; border-bottom:1px solid #21262D; display:flex; align-items:center; gap:10px;">
+            <span style="background:rgba(88,166,255,0.2); color:#58A6FF; font-size:10px; font-weight:700; padding:3px 10px; border-radius:8px;">사례 검색</span>
+            <span style="color:#E5E7EB; font-size:14px; font-weight:600;">{topic} — 좋은 사례</span>
+        </div>
+        <div style="padding:18px;">
+            <div style="background:#0D1117; border:1px solid #21262D; border-radius:8px; padding:14px; margin-bottom:12px;">
+                <div style="font-size:10px; color:#7D8590; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; font-weight:600;">좋은 질문 사례</div>
+                {examples_html}
+            </div>
+            <div style="background:#0D1117; border:1px solid #21262D; border-radius:8px; padding:14px;">
+                <div style="font-size:10px; color:#7D8590; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; font-weight:600;">추천 프레임워크</div>
+                <div style="background:#161B22; border-radius:6px; padding:12px 14px; border:1px solid #21262D;">
+                    <div style="color:#58A6FF; font-size:14px; font-weight:600; margin-bottom:4px;">{framework}</div>
+                </div>
+            </div>
+        </div>
+    </div>''', unsafe_allow_html=True)
+
+
 def _inject_custom_css():
     st.markdown("""
     <style>
@@ -355,6 +389,11 @@ for msg in st.session_state.messages:
                     st.session_state.app_state.get("quiz_evaluation", ""),
                     st.session_state.quiz_data_for_result,
                 )
+            elif msg_type == "research" and st.session_state.app_state.get("research"):
+                _render_research_card(
+                    st.session_state.app_state["research"],
+                    msg.get("topic", ""),
+                )
             elif msg["content"]:
                 st.markdown(msg["content"])
 
@@ -470,22 +509,18 @@ if prompt := st.chat_input("질문을 입력하세요"):
                 response_text = ""
 
     elif current_mode == "research":
-        with st.chat_message("assistant"):
-            with st.spinner("사례를 검색하고 있습니다..."):
-                result = create_main_graph().invoke(state)
+        with st.spinner("사례를 검색하고 있습니다..."):
+            result = create_main_graph().invoke(state)
         research_data = result.get("research")
+        st.session_state.app_state["research"] = research_data
         if research_data and research_data.get("examples"):
-            examples_str = "\n".join(f"- {e}" for e in research_data["examples"])
-            response_text = (
-                f"**좋은 질문 사례**\n\n{examples_str}\n\n"
-                f"**추천 프레임워크:** {research_data['framework']}"
-            )
+            st.session_state.messages.append({"role": "assistant", "content": "", "type": "research", "topic": prompt})
+            response_text = ""
         else:
             response_text = "사례를 생성하지 못했습니다. 다시 시도해주세요."
-        st.session_state.app_state["research"] = research_data
     else:
         response_text = "알 수 없는 모드입니다."
 
-    if current_mode != "quiz":
+    if response_text:
         st.session_state.messages.append({"role": "assistant", "content": response_text})
     st.rerun()
