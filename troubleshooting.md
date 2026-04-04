@@ -35,6 +35,17 @@
 | 18 | Minor 수정 4건 | code fence regex, skipif 조건, test state 필드, router 로깅 |
 | 19 | UX 개선: 질문 말풍선 선표시 | 스피너 전에 사용자 질문을 채팅 말풍선으로 즉시 렌더링 |
 
+### Phase 3: UI 리디자인 (6 Tasks)
+
+| # | Task | 설명 | Commit |
+|---|------|------|--------|
+| 20 | 다크 테마 + 글로벌 CSS | `config.toml` 다크 테마, `_inject_custom_css()` CSS 주입 | `9f79cb3` |
+| 21 | 사이드바 리디자인 | 이모지 모드 버튼, 모노톤 블루 바 차트, 버튼 정리 | `0e4c4f4` |
+| 22 | 코칭 결과 대시보드 | 점수 카드 3열 + expander + 액션 버튼 (`_render_coaching_dashboard`) | `7b5e101` |
+| 23 | 퀴즈 카드 UI | 퀴즈 출제/결과 카드 스타일링 (`_render_quiz_card`, `_render_quiz_result`) | — |
+| 24 | 사례 검색 카드 UI | 검색 결과 카드 스타일링 (`_render_research_card`) | — |
+| 25 | 최종 정리 + 보안 수정 | dead code 제거, `html.escape()` XSS 방지, Expander CSS 호환성 | `c84791c` |
+
 ---
 
 ## 2. 에러 및 해결
@@ -286,6 +297,46 @@ if prompt := st.chat_input("질문을 입력하세요"):
 ```
 
 **영향 파일:** `streamlit_app.py`
+
+---
+
+### 2.12 UI 리디자인 — 다크 테마 + 대시보드 레이아웃
+
+**변경 범위:**
+- `.streamlit/config.toml` — 테마 색상 변경
+- `streamlit_app.py` — UI 전면 변경 (백엔드 로직 변경 없음)
+
+**주요 변경사항:**
+
+**1. 다크 테마 적용**
+- 배경: `#0D1117`, 사이드바: `#161B22`, 카드: `#1C2128`
+- 프라이머리 블루: `#58A6FF`, 골드: `#F59E0B`, 그린: `#3FB950`, 레드: `#DA3633`
+- `st.markdown(unsafe_allow_html=True)`로 커스텀 CSS 주입
+
+**2. 코칭 결과 — 텍스트 → 대시보드**
+- Before: `_format_coaching_result()` → 하나의 마크다운 텍스트 블록
+- After: `_render_coaching_dashboard()` → 점수 카드 3열 (점수/문제유형/변화) + `st.expander` 3개 (진단/리라이팅/답변 비교)
+
+**3. 퀴즈 모드 — 카드 UI**
+- `_render_quiz_card()`: QUIZ 배지 + 인용 박스 + 힌트
+- `_render_quiz_result()`: 평가 결과 + 좋은 질문 예시
+
+**4. 사례 검색 — 카드 UI**
+- `_render_research_card()`: 번호 배지 사례 목록 + 프레임워크 카드
+
+**5. 사이드바 개선**
+- 모드 선택: 이모지 아이콘 버튼
+- 점수 차트: 모노톤 블루 바 차트 (`#30363D` → `#58A6FF` 그라데이션)
+- "사용방법" expander 제거
+
+**6. 보안 수정 — XSS 방지**
+- 모든 HTML 템플릿의 동적 값에 `html.escape()` 적용
+- LLM 응답이나 사용자 입력이 HTML로 렌더링될 때 스크립트 삽입 방지
+
+**7. CSS 호환성**
+- Expander 셀렉터: `.streamlit-expanderHeader` (구버전) + `div[data-testid="stExpander"]` (1.55+) 병행
+
+**영향 파일:** `.streamlit/config.toml`, `streamlit_app.py`
 
 ---
 
