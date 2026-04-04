@@ -79,6 +79,47 @@ def _render_coaching_dashboard(attempt: dict, all_attempts: list):
         st.markdown(f"**피드백:** {attempt['feedback']}")
 
 
+def _render_quiz_card(quiz_data: dict):
+    """퀴즈 출제 카드를 스타일링하여 표시"""
+    st.markdown(f'''
+    <div style="background:#161B22; border:1px solid #21262D; border-radius:12px; overflow:hidden; margin-bottom:16px;">
+        <div style="background:#1C2128; padding:14px 18px; border-bottom:1px solid #21262D; display:flex; align-items:center; gap:10px;">
+            <span style="background:#DA3633; color:#fff; font-size:10px; font-weight:700; padding:3px 10px; border-radius:8px;">QUIZ</span>
+            <span style="color:#E5E7EB; font-size:14px; font-weight:600;">이 질문의 문제점은?</span>
+        </div>
+        <div style="padding:18px;">
+            <div style="background:#0D1117; border:1px solid #21262D; border-radius:8px; padding:16px 18px; margin-bottom:14px;">
+                <div style="color:#E5E7EB; font-size:15px; line-height:1.6; font-style:italic;">"{quiz_data['bad_question']}"</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; background:rgba(31,111,235,0.07); border:1px solid rgba(31,111,235,0.2); border-radius:8px; padding:10px 14px;">
+                <span style="font-size:13px;">💡</span>
+                <span style="color:#58A6FF; font-size:12px;">힌트: {quiz_data['hint']}</span>
+            </div>
+        </div>
+    </div>''', unsafe_allow_html=True)
+
+
+def _render_quiz_result(quiz_evaluation: str, quiz_data: dict):
+    """퀴즈 평가 결과 카드를 스타일링하여 표시"""
+    st.markdown(f'''
+    <div style="background:#161B22; border:1px solid #21262D; border-radius:12px; overflow:hidden;">
+        <div style="background:#1C2128; padding:14px 18px; border-bottom:1px solid #21262D; display:flex; align-items:center; gap:10px;">
+            <span style="background:rgba(63,185,80,0.13); color:#3FB950; font-size:10px; font-weight:700; padding:3px 10px; border-radius:8px;">✓ 평가 완료</span>
+            <span style="color:#E5E7EB; font-size:14px; font-weight:600;">평가 결과</span>
+        </div>
+        <div style="padding:18px;">
+            <div style="background:#0D1117; border:1px solid #21262D; border-radius:8px; padding:14px 16px; margin-bottom:12px;">
+                <div style="font-size:10px; color:#7D8590; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; font-weight:600;">평가</div>
+                <div style="color:#D1D5DB; font-size:13px; line-height:1.7;">{quiz_evaluation}</div>
+            </div>
+            <div style="background:rgba(63,185,80,0.04); border:1px solid rgba(63,185,80,0.13); border-radius:8px; padding:14px 16px;">
+                <div style="font-size:10px; color:#3FB950; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; font-weight:600;">좋은 질문 예시</div>
+                <div style="color:#58A6FF; font-size:14px; font-style:italic; line-height:1.6;">{quiz_data["good_version"]}</div>
+            </div>
+        </div>
+    </div>''', unsafe_allow_html=True)
+
+
 def _inject_custom_css():
     st.markdown("""
     <style>
@@ -226,6 +267,8 @@ if "awaiting_action" not in st.session_state:
     st.session_state.awaiting_action = False
 if "awaiting_save" not in st.session_state:
     st.session_state.awaiting_save = False
+if "quiz_data_for_result" not in st.session_state:
+    st.session_state.quiz_data_for_result = None
 
 # --- Sidebar ---
 with st.sidebar:
@@ -289,6 +332,7 @@ with st.sidebar:
         st.session_state.app_state = _get_default_state()
         st.session_state.messages = []
         st.session_state.quiz_data = None
+        st.session_state.quiz_data_for_result = None
         st.session_state.awaiting_action = False
         st.session_state.awaiting_save = False
         st.rerun()
@@ -298,9 +342,21 @@ st.title("💡 좋은 질문 연습실")
 
 # Display chat messages
 for msg in st.session_state.messages:
-    if msg["content"]:
-        with st.chat_message(msg["role"]):
+    if msg["role"] == "user":
+        with st.chat_message("user"):
             st.markdown(msg["content"])
+    elif msg["role"] == "assistant":
+        msg_type = msg.get("type", "text")
+        with st.chat_message("assistant"):
+            if msg_type == "quiz_question" and st.session_state.quiz_data:
+                _render_quiz_card(st.session_state.quiz_data)
+            elif msg_type == "quiz_result" and st.session_state.quiz_data_for_result:
+                _render_quiz_result(
+                    st.session_state.app_state.get("quiz_evaluation", ""),
+                    st.session_state.quiz_data_for_result,
+                )
+            elif msg["content"]:
+                st.markdown(msg["content"])
 
 # Coaching dashboard (점수 카드 + expander)
 attempts = st.session_state.app_state.get("attempts", [])
@@ -393,36 +449,25 @@ if prompt := st.chat_input("질문을 입력하세요"):
         response_text = ""
 
     elif current_mode == "quiz":
-        with st.chat_message("assistant"):
-            with st.spinner("퀴즈를 준비하고 있습니다..."):
-                if st.session_state.quiz_data is None:
-                    result = create_main_graph().invoke(state)
-                    st.session_state.quiz_data = result.get("quiz_data")
-                    qd = st.session_state.quiz_data
-                    response_text = (
-                        f"**퀴즈 문제**\n\n"
-                        f"다음 질문의 문제점은 무엇일까요?\n\n"
-                        f"> {qd['bad_question']}\n\n"
-                        f"힌트: {qd['hint']}"
-                    )
-                else:
-                    eval_state = {
-                        **state,
-                        "quiz_data": st.session_state.quiz_data,
-                        "user_answer": prompt,
-                    }
-                    eval_result = evaluate_quiz(eval_state)
-                    st.session_state.app_state["quiz_history"] = eval_result.get(
-                        "quiz_history"
-                    )
-                    qd = st.session_state.quiz_data
-                    response_text = (
-                        f"**평가 결과**\n\n"
-                        f"{eval_result['quiz_evaluation']}\n\n"
-                        f"---\n"
-                        f"**좋은 질문 예시:** {qd['good_version']}"
-                    )
-                    st.session_state.quiz_data = None
+        with st.spinner("퀴즈를 준비하고 있습니다..."):
+            if st.session_state.quiz_data is None:
+                result = create_main_graph().invoke(state)
+                st.session_state.quiz_data = result.get("quiz_data")
+                st.session_state.messages.append({"role": "assistant", "content": "", "type": "quiz_question"})
+                response_text = ""
+            else:
+                eval_state = {
+                    **state,
+                    "quiz_data": st.session_state.quiz_data,
+                    "user_answer": prompt,
+                }
+                eval_result = evaluate_quiz(eval_state)
+                st.session_state.app_state["quiz_history"] = eval_result.get("quiz_history")
+                st.session_state.app_state["quiz_evaluation"] = eval_result.get("quiz_evaluation")
+                st.session_state.quiz_data_for_result = st.session_state.quiz_data
+                st.session_state.quiz_data = None
+                st.session_state.messages.append({"role": "assistant", "content": "", "type": "quiz_result"})
+                response_text = ""
 
     elif current_mode == "research":
         with st.chat_message("assistant"):
@@ -441,5 +486,6 @@ if prompt := st.chat_input("질문을 입력하세요"):
     else:
         response_text = "알 수 없는 모드입니다."
 
-    st.session_state.messages.append({"role": "assistant", "content": response_text})
+    if current_mode != "quiz":
+        st.session_state.messages.append({"role": "assistant", "content": response_text})
     st.rerun()
