@@ -272,6 +272,39 @@ def _inject_custom_css():
 
     /* 체크박스 */
     .stCheckbox label { color: #8B949E !important; }
+
+    /* 세그먼트 컨트롤 (메인 영역 horizontal radio) */
+    .stMainBlockContainer div[data-testid="stHorizontalBlock"]:has(div[data-testid="stRadio"]) div[data-testid="stRadio"] > div[role="radiogroup"] {
+        background: #161B22;
+        border: 1px solid #21262D;
+        border-radius: 10px;
+        padding: 4px;
+        gap: 0 !important;
+        display: inline-flex !important;
+        width: auto !important;
+    }
+    .stMainBlockContainer div[data-testid="stRadio"] > div[role="radiogroup"] > label {
+        padding: 10px 24px !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        color: #7D8590 !important;
+        background: transparent !important;
+        border: none !important;
+        margin: 0 !important;
+        white-space: nowrap;
+    }
+    .stMainBlockContainer div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) {
+        background: #1F6FEB !important;
+        color: #fff !important;
+        box-shadow: 0 2px 8px rgba(31,111,235,0.3);
+    }
+    .stMainBlockContainer div[data-testid="stRadio"] > div[role="radiogroup"] > label:last-child:has(input:checked) {
+        background: #8B5CF6 !important;
+        box-shadow: 0 2px 8px rgba(139,92,246,0.3);
+    }
+    .stMainBlockContainer div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
+        display: none !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -315,6 +348,8 @@ if "awaiting_save" not in st.session_state:
     st.session_state.awaiting_save = False
 if "quiz_data_for_result" not in st.session_state:
     st.session_state.quiz_data_for_result = None
+if "analysis_mode" not in st.session_state:
+    st.session_state.analysis_mode = "⚡ 빠른 분석"
 
 # --- Sidebar ---
 with st.sidebar:
@@ -340,8 +375,6 @@ with st.sidebar:
         label_visibility="collapsed",
     )
     st.session_state.app_state["context"] = context if context else None
-
-    use_parallel = st.checkbox("병렬 처리", value=True)
 
     # Score chart
     attempts = st.session_state.app_state.get("attempts", [])
@@ -385,6 +418,29 @@ with st.sidebar:
 
 # --- Main Area ---
 st.title("💡 좋은 질문 연습실")
+
+# 분석 모드 선택 (코칭 모드에서만 표시)
+if st.session_state.app_state["mode"] == "coach":
+    analysis_mode = st.radio(
+        "분석 모드",
+        ["⚡ 빠른 분석", "🔬 심층 분석"],
+        index=0 if st.session_state.analysis_mode == "⚡ 빠른 분석" else 1,
+        horizontal=True,
+        label_visibility="collapsed",
+    )
+    st.session_state.analysis_mode = analysis_mode
+    use_parallel = analysis_mode == "⚡ 빠른 분석"
+
+    desc_color = "#1F6FEB" if use_parallel else "#8B5CF6"
+    desc_dot = "#3FB950" if use_parallel else "#8B5CF6"
+    desc_text = "병렬 처리로 빠르게 핵심 피드백을 제공합니다" if use_parallel else "단계별로 정밀하게 분석하여 상세한 코칭을 제공합니다"
+    st.markdown(
+        f'<p style="font-size:12px; color:#7D8590; margin-top:-8px; margin-bottom:16px;">'
+        f'<span style="color:{desc_dot};">●</span> {desc_text}</p>',
+        unsafe_allow_html=True,
+    )
+else:
+    use_parallel = False
 
 # Display chat messages
 for msg in st.session_state.messages:
