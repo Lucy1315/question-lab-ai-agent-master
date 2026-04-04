@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from html import escape
+
 import streamlit as st
 
 from app.agents.quiz import evaluate_quiz
@@ -33,7 +35,7 @@ def _render_coaching_dashboard(attempt: dict, all_attempts: list):
     with col2:
         st.markdown(f'''
         <div style="background:#1C2128; border:1px solid #21262D; border-radius:10px; padding:20px; text-align:center;">
-            <div style="font-size:20px; font-weight:600; color:#58A6FF;">{attempt["problem_type"]}</div>
+            <div style="font-size:20px; font-weight:600; color:#58A6FF;">{escape(str(attempt["problem_type"]))}</div>
             <div style="font-size:12px; color:#7D8590; margin-top:8px;">문제 유형</div>
         </div>''', unsafe_allow_html=True)
     with col3:
@@ -63,14 +65,14 @@ def _render_coaching_dashboard(attempt: dict, all_attempts: list):
                 st.markdown(f'''
                 <div style="background:#0D1117; border:1px solid #21262D; border-radius:8px; padding:12px;">
                     <div style="font-size:10px; color:#F59E0B; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; font-weight:600;">⚠️ 현재 질문의 답변</div>
-                    <div style="font-size:12px; color:#8B949E; font-style:italic; line-height:1.6;">{attempt["example_current"]}</div>
+                    <div style="font-size:12px; color:#8B949E; font-style:italic; line-height:1.6;">{escape(str(attempt["example_current"]))}</div>
                 </div>''', unsafe_allow_html=True)
             with cmp_col2:
                 improved = attempt.get("example_improved", "")
                 st.markdown(f'''
                 <div style="background:#0D1117; border:1px solid #3FB95044; border-radius:8px; padding:12px;">
                     <div style="font-size:10px; color:#3FB950; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; font-weight:600;">✅ 개선 질문의 답변</div>
-                    <div style="font-size:12px; color:#8B949E; font-style:italic; line-height:1.6;">{improved}</div>
+                    <div style="font-size:12px; color:#8B949E; font-style:italic; line-height:1.6;">{escape(str(improved))}</div>
                 </div>''', unsafe_allow_html=True)
 
     # 피드백
@@ -88,11 +90,11 @@ def _render_quiz_card(quiz_data: dict):
         </div>
         <div style="padding:18px;">
             <div style="background:#0D1117; border:1px solid #21262D; border-radius:8px; padding:16px 18px; margin-bottom:14px;">
-                <div style="color:#E5E7EB; font-size:15px; line-height:1.6; font-style:italic;">"{quiz_data['bad_question']}"</div>
+                <div style="color:#E5E7EB; font-size:15px; line-height:1.6; font-style:italic;">"{escape(str(quiz_data['bad_question']))}"</div>
             </div>
             <div style="display:flex; align-items:center; gap:8px; background:rgba(31,111,235,0.07); border:1px solid rgba(31,111,235,0.2); border-radius:8px; padding:10px 14px;">
                 <span style="font-size:13px;">💡</span>
-                <span style="color:#58A6FF; font-size:12px;">힌트: {quiz_data['hint']}</span>
+                <span style="color:#58A6FF; font-size:12px;">힌트: {escape(str(quiz_data['hint']))}</span>
             </div>
         </div>
     </div>''', unsafe_allow_html=True)
@@ -109,11 +111,11 @@ def _render_quiz_result(quiz_evaluation: str, quiz_data: dict):
         <div style="padding:18px;">
             <div style="background:#0D1117; border:1px solid #21262D; border-radius:8px; padding:14px 16px; margin-bottom:12px;">
                 <div style="font-size:10px; color:#7D8590; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; font-weight:600;">평가</div>
-                <div style="color:#D1D5DB; font-size:13px; line-height:1.7;">{quiz_evaluation}</div>
+                <div style="color:#D1D5DB; font-size:13px; line-height:1.7;">{escape(str(quiz_evaluation))}</div>
             </div>
             <div style="background:rgba(63,185,80,0.04); border:1px solid rgba(63,185,80,0.13); border-radius:8px; padding:14px 16px;">
                 <div style="font-size:10px; color:#3FB950; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; font-weight:600;">좋은 질문 예시</div>
-                <div style="color:#58A6FF; font-size:14px; font-style:italic; line-height:1.6;">{quiz_data["good_version"]}</div>
+                <div style="color:#58A6FF; font-size:14px; font-style:italic; line-height:1.6;">{escape(str(quiz_data["good_version"]))}</div>
             </div>
         </div>
     </div>''', unsafe_allow_html=True)
@@ -129,14 +131,14 @@ def _render_research_card(research_data: dict, topic: str):
         examples_html += f'''
         <div style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; background:#161B22; border-radius:6px; border:1px solid #21262D; margin-bottom:6px;">
             <span style="background:rgba(31,111,235,0.2); color:#58A6FF; font-size:10px; font-weight:700; min-width:20px; height:20px; border-radius:5px; display:flex; align-items:center; justify-content:center;">{i+1}</span>
-            <span style="color:#D1D5DB; font-size:12px; line-height:1.5;">{ex}</span>
+            <span style="color:#D1D5DB; font-size:12px; line-height:1.5;">{escape(str(ex))}</span>
         </div>'''
 
     st.markdown(f'''
     <div style="background:#161B22; border:1px solid #21262D; border-radius:12px; overflow:hidden;">
         <div style="background:#1C2128; padding:14px 18px; border-bottom:1px solid #21262D; display:flex; align-items:center; gap:10px;">
             <span style="background:rgba(88,166,255,0.2); color:#58A6FF; font-size:10px; font-weight:700; padding:3px 10px; border-radius:8px;">사례 검색</span>
-            <span style="color:#E5E7EB; font-size:14px; font-weight:600;">{topic} — 좋은 사례</span>
+            <span style="color:#E5E7EB; font-size:14px; font-weight:600;">{escape(str(topic))} — 좋은 사례</span>
         </div>
         <div style="padding:18px;">
             <div style="background:#0D1117; border:1px solid #21262D; border-radius:8px; padding:14px; margin-bottom:12px;">
@@ -146,7 +148,7 @@ def _render_research_card(research_data: dict, topic: str):
             <div style="background:#0D1117; border:1px solid #21262D; border-radius:8px; padding:14px;">
                 <div style="font-size:10px; color:#7D8590; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; font-weight:600;">추천 프레임워크</div>
                 <div style="background:#161B22; border-radius:6px; padding:12px 14px; border:1px solid #21262D;">
-                    <div style="color:#58A6FF; font-size:14px; font-weight:600; margin-bottom:4px;">{framework}</div>
+                    <div style="color:#58A6FF; font-size:14px; font-weight:600; margin-bottom:4px;">{escape(str(framework))}</div>
                 </div>
             </div>
         </div>
@@ -180,14 +182,16 @@ def _inject_custom_css():
     }
 
     /* Expander 스타일 */
-    .streamlit-expanderHeader {
+    .streamlit-expanderHeader,
+    div[data-testid="stExpander"] details summary {
         background-color: #1C2128 !important;
         border: 1px solid #21262D !important;
         border-radius: 8px !important;
         color: #D1D5DB !important;
         font-size: 14px !important;
     }
-    .streamlit-expanderContent {
+    .streamlit-expanderContent,
+    div[data-testid="stExpander"] details div[data-testid="stExpanderDetails"] {
         background-color: #1C2128 !important;
         border: 1px solid #21262D !important;
         border-top: none !important;
@@ -338,7 +342,7 @@ with st.sidebar:
         scores = [a["score"] for a in attempts]
         chart_html = '<div style="background:#0D1117; border:1px solid #21262D; border-radius:10px; padding:16px;">'
         for i, score in enumerate(scores):
-            pct = score * 10
+            pct = max(score * 10, 5)
             chart_html += f'''
             <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
                 <span style="font-size:11px; color:#7D8590; width:20px; text-align:right;">{i+1}</span>
