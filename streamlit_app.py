@@ -8,42 +8,75 @@ from app.graph import create_main_graph, create_parallel_coach_graph
 from app.nodes.export import export_session
 
 
-def _format_coaching_result(attempt: dict, all_attempts: list) -> str:
+def _render_coaching_dashboard(attempt: dict, all_attempts: list):
+    """코칭 결과를 점수 카드 + expander 대시보드로 표시"""
     score = attempt["score"]
     score_diff = ""
+    score_color = "#7D8590"
     if len(all_attempts) > 1:
         prev = all_attempts[-2]["score"]
         diff = score - prev
         if diff > 0:
-            score_diff = f" +{diff}점"
+            score_diff = f"+{diff}"
+            score_color = "#3FB950"
         elif diff < 0:
-            score_diff = f" {diff}점"
+            score_diff = str(diff)
+            score_color = "#DA3633"
 
-    parts = [
-        f"### 진단 결과 ({score}/10점){score_diff}",
-        f"**문제 유형:** {attempt['problem_type']}",
-        f"\n{attempt['diagnosis']}",
-    ]
-    if attempt.get("strategy"):
-        parts.append(f"\n### 개선 전략\n{attempt['strategy']}")
+    # 점수 카드 3열
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown(f'''
+        <div style="background:#1C2128; border:1px solid #21262D; border-radius:10px; padding:20px; text-align:center;">
+            <div style="font-size:36px; font-weight:700; color:#F59E0B;">{score}<span style="font-size:16px; color:#7D8590;">/10</span></div>
+            <div style="font-size:12px; color:#7D8590; margin-top:8px;">질문 점수</div>
+        </div>''', unsafe_allow_html=True)
+    with col2:
+        st.markdown(f'''
+        <div style="background:#1C2128; border:1px solid #21262D; border-radius:10px; padding:20px; text-align:center;">
+            <div style="font-size:20px; font-weight:600; color:#58A6FF;">{attempt["problem_type"]}</div>
+            <div style="font-size:12px; color:#7D8590; margin-top:8px;">문제 유형</div>
+        </div>''', unsafe_allow_html=True)
+    with col3:
+        display_diff = score_diff if score_diff else "—"
+        st.markdown(f'''
+        <div style="background:#1C2128; border:1px solid #21262D; border-radius:10px; padding:20px; text-align:center;">
+            <div style="font-size:36px; font-weight:700; color:{score_color};">{display_diff}</div>
+            <div style="font-size:12px; color:#7D8590; margin-top:8px;">점수 변화</div>
+        </div>''', unsafe_allow_html=True)
+
+    # 진단 상세 expander
+    with st.expander("▶ 진단 상세 보기"):
+        st.markdown(attempt["diagnosis"])
+
+    # 개선된 질문 expander
     if attempt.get("rewritten"):
-        parts.append(f"\n### 리라이팅 제안\n> {attempt['rewritten']}")
-    parts.append(f"\n### 피드백\n{attempt['feedback']}")
+        with st.expander("▶ 개선된 질문 보기"):
+            st.markdown(f'> *{attempt["rewritten"]}*')
+            if attempt.get("strategy"):
+                st.markdown(f"\n**개선 전략:** {attempt['strategy']}")
 
+    # 예시 답변 비교 expander
     if attempt.get("example_current"):
-        parts.append("\n---\n### 이 질문으로 받을 수 있는 답변")
-        parts.append(
-            f"\n**⚠️ 현재 질문 ({score}점)**\n"
-            f"> {attempt['example_current']}"
-        )
-        if attempt.get("example_improved"):
-            parts.append(
-                f"\n▼ 리라이팅 후 ▼\n"
-                f"\n**✅ 개선된 질문**\n"
-                f"> {attempt['example_improved']}"
-            )
+        with st.expander("▶ 예시 답변 비교"):
+            cmp_col1, cmp_col2 = st.columns(2)
+            with cmp_col1:
+                st.markdown(f'''
+                <div style="background:#0D1117; border:1px solid #21262D; border-radius:8px; padding:12px;">
+                    <div style="font-size:10px; color:#F59E0B; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; font-weight:600;">⚠️ 현재 질문의 답변</div>
+                    <div style="font-size:12px; color:#8B949E; font-style:italic; line-height:1.6;">{attempt["example_current"]}</div>
+                </div>''', unsafe_allow_html=True)
+            with cmp_col2:
+                improved = attempt.get("example_improved", "")
+                st.markdown(f'''
+                <div style="background:#0D1117; border:1px solid #3FB95044; border-radius:8px; padding:12px;">
+                    <div style="font-size:10px; color:#3FB950; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; font-weight:600;">✅ 개선 질문의 답변</div>
+                    <div style="font-size:12px; color:#8B949E; font-style:italic; line-height:1.6;">{improved}</div>
+                </div>''', unsafe_allow_html=True)
 
-    return "\n".join(parts)
+    # 피드백
+    if attempt.get("feedback"):
+        st.markdown(f"**피드백:** {attempt['feedback']}")
 
 
 def _inject_custom_css():
@@ -265,14 +298,21 @@ st.title("💡 좋은 질문 연습실")
 
 # Display chat messages
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+    if msg["content"]:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+# Coaching dashboard (점수 카드 + expander)
+attempts = st.session_state.app_state.get("attempts", [])
+if attempts and st.session_state.app_state["mode"] == "coach":
+    last_attempt = attempts[-1]
+    _render_coaching_dashboard(last_attempt, attempts)
 
 # Action buttons (after coaching result)
 if st.session_state.awaiting_action and st.session_state.app_state["mode"] == "coach":
     col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("수락"):
+        if st.button("✅ 만족해요"):
             st.session_state.awaiting_action = False
             st.session_state.awaiting_save = True
             st.session_state.messages.append({
@@ -281,7 +321,7 @@ if st.session_state.awaiting_action and st.session_state.app_state["mode"] == "c
             })
             st.rerun()
     with col2:
-        if st.button("수정"):
+        if st.button("✏️ 직접 수정할게요"):
             st.session_state.awaiting_action = False
             st.session_state.messages.append({
                 "role": "assistant",
@@ -289,7 +329,7 @@ if st.session_state.awaiting_action and st.session_state.app_state["mode"] == "c
             })
             st.rerun()
     with col3:
-        if st.button("재시도"):
+        if st.button("🔄 다시 분석해줘"):
             st.session_state.awaiting_action = False
             state = st.session_state.app_state.copy()
             for key in ["diagnosis", "problem_type", "score", "strategy", "rewritten", "feedback", "error"]:
@@ -300,11 +340,6 @@ if st.session_state.awaiting_action and st.session_state.app_state["mode"] == "c
             result = active_graph.invoke(state)
             st.session_state.app_state["attempts"] = result.get(
                 "attempts", state["attempts"]
-            )
-            last_attempt = result["attempts"][-1]
-            response_text = _format_coaching_result(last_attempt, result["attempts"])
-            st.session_state.messages.append(
-                {"role": "assistant", "content": response_text}
             )
             st.session_state.awaiting_action = True
             st.rerun()
@@ -345,19 +380,17 @@ if prompt := st.chat_input("질문을 입력하세요"):
     state["current_input"] = prompt
 
     if current_mode == "coach":
-        with st.chat_message("assistant"):
-            with st.spinner("질문을 분석하고 있습니다..."):
-                active_graph = (
-                    create_parallel_coach_graph() if use_parallel else create_main_graph()
-                )
-                result = active_graph.invoke(state)
+        with st.spinner("질문을 분석하고 있습니다..."):
+            active_graph = (
+                create_parallel_coach_graph() if use_parallel else create_main_graph()
+            )
+            result = active_graph.invoke(state)
         st.session_state.app_state["attempts"] = result.get(
             "attempts", state["attempts"]
         )
         st.session_state.app_state["research"] = result.get("research")
-        last_attempt = result["attempts"][-1]
-        response_text = _format_coaching_result(last_attempt, result["attempts"])
         st.session_state.awaiting_action = True
+        response_text = ""
 
     elif current_mode == "quiz":
         with st.chat_message("assistant"):
