@@ -196,56 +196,63 @@ if "awaiting_save" not in st.session_state:
 
 # --- Sidebar ---
 with st.sidebar:
-    st.title("설정")
-    mode = st.radio("모드 선택", ["코칭", "퀴즈", "사례 검색"], index=0)
-    mode_map = {"코칭": "coach", "퀴즈": "quiz", "사례 검색": "research"}
+    st.markdown("### 💡 질문 연습실")
+    st.markdown("---")
+
+    st.markdown('<p style="font-size:10px; color:#7D8590; text-transform:uppercase; letter-spacing:1px; font-weight:600;">모드</p>', unsafe_allow_html=True)
+    mode = st.radio(
+        "모드 선택",
+        ["🎯 코칭", "🧩 퀴즈", "🔍 사례 검색"],
+        index=0,
+        label_visibility="collapsed",
+    )
+    mode_map = {"🎯 코칭": "coach", "🧩 퀴즈": "quiz", "🔍 사례 검색": "research"}
     st.session_state.app_state["mode"] = mode_map[mode]
 
+    st.markdown("---")
+    st.markdown('<p style="font-size:10px; color:#7D8590; text-transform:uppercase; letter-spacing:1px; font-weight:600;">질문 맥락</p>', unsafe_allow_html=True)
     context = st.text_input(
-        "질문 사용 맥락 (선택)",
+        "질문 사용 맥락",
         value=st.session_state.app_state.get("context") or "",
+        placeholder="예: 팀 회의, 면접, 코드 리뷰...",
+        label_visibility="collapsed",
     )
     st.session_state.app_state["context"] = context if context else None
 
-    use_parallel = st.checkbox("병렬 처리 (Researcher + Diagnoser)", value=False)
-
-    st.divider()
-    with st.expander("사용방법"):
-        st.markdown(
-            "**1. 코칭 모드**\n\n"
-            "질문을 입력하면 AI가 진단 → 개선 전략 → 리라이팅을 제안합니다. "
-            "결과에는 현재 질문과 개선된 질문으로 받을 수 있는 **예시 답변**도 함께 제공됩니다.\n\n"
-            '예시: *"이 프로젝트 어떻게 해야 하나요?"*\n\n'
-            "→ 진단: 범위가 너무 넓고 구체적 맥락이 없음 (4/10점)\n\n"
-            '→ 리라이팅: *"React 프론트엔드에서 API 응답 지연을 줄이려면 '
-            '어떤 캐싱 전략이 효과적인가요?"*\n\n'
-            "→ 예시 답변 비교: 현재 질문의 모호한 답변 vs 개선 질문의 구체적 답변\n\n"
-            "결과를 확인한 후 **수락** / **수정** / **재시도** 중 선택할 수 있습니다.\n\n"
-            "---\n\n"
-            "**2. 퀴즈 모드**\n\n"
-            "AI가 나쁜 질문 예시를 보여주고, 문제점을 맞춰보는 퀴즈를 출제합니다.\n\n"
-            '예시: *"이거 왜 안 돼요?"* → 문제점은 무엇일까요?\n\n'
-            "---\n\n"
-            "**3. 사례 검색 모드**\n\n"
-            "주제를 입력하면 좋은 질문 사례와 프레임워크를 추천합니다.\n\n"
-            '예시: *"면접 질문"* → 관련 좋은 질문 사례 + 추천 프레임워크\n\n'
-            "---\n\n"
-            "**💡 팁**\n\n"
-            "- '질문 사용 맥락'을 입력하면 더 정확한 코칭을 받을 수 있습니다.\n\n"
-            "- '병렬 처리'를 켜면 Researcher와 Diagnoser가 동시에 실행됩니다.\n\n"
-            "- '새로고침' 버튼으로 대화를 초기화할 수 있습니다."
-        )
+    use_parallel = st.checkbox("병렬 처리", value=False)
 
     # Score chart
     attempts = st.session_state.app_state.get("attempts", [])
     if attempts:
-        st.subheader("점수 변화")
+        st.markdown("---")
+        st.markdown('<p style="font-size:10px; color:#7D8590; text-transform:uppercase; letter-spacing:1px; font-weight:600;">점수 변화</p>', unsafe_allow_html=True)
         scores = [a["score"] for a in attempts]
-        df = pd.DataFrame({"시도": range(1, len(scores) + 1), "점수": scores})
-        st.line_chart(df.set_index("시도"))
+        chart_html = '<div style="background:#0D1117; border:1px solid #21262D; border-radius:10px; padding:16px;">'
+        for i, score in enumerate(scores):
+            pct = score * 10
+            chart_html += f'''
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                <span style="font-size:11px; color:#7D8590; width:20px; text-align:right;">{i+1}</span>
+                <div style="flex:1; height:20px; background:#161B22; border-radius:6px; overflow:hidden;">
+                    <div style="width:{pct}%; height:100%; background:linear-gradient(90deg, #30363D, #58A6FF);
+                                border-radius:6px; display:flex; align-items:center; justify-content:flex-end;
+                                padding-right:8px; font-size:10px; font-weight:600; color:#fff;
+                                filter:drop-shadow(0 0 4px rgba(88,166,255,0.2));">{score}</div>
+                </div>
+            </div>'''
+        chart_html += '</div>'
+        st.markdown(chart_html, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # Export button
+    if attempts:
+        if st.button("세션 저장", use_container_width=True):
+            result = export_session(st.session_state.app_state)
+            st.success(f"저장됨: {result['export_path']}")
 
     # Reset button
-    if st.button("새로고침"):
+    if st.button("새로고침", use_container_width=True):
         st.session_state.app_state = _get_default_state()
         st.session_state.messages = []
         st.session_state.quiz_data = None
@@ -253,14 +260,8 @@ with st.sidebar:
         st.session_state.awaiting_save = False
         st.rerun()
 
-    # Export button
-    if attempts:
-        if st.button("세션 저장"):
-            result = export_session(st.session_state.app_state)
-            st.success(f"저장됨: {result['export_path']}")
-
 # --- Main Area ---
-st.title("💡 좋은 질문 연습실 (Question Lab)")
+st.title("💡 좋은 질문 연습실")
 
 # Display chat messages
 for msg in st.session_state.messages:
