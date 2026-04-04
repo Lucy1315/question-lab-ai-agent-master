@@ -45,6 +45,8 @@
 | 23 | 퀴즈 카드 UI | 퀴즈 출제/결과 카드 스타일링 (`_render_quiz_card`, `_render_quiz_result`) | — |
 | 24 | 사례 검색 카드 UI | 검색 결과 카드 스타일링 (`_render_research_card`) | — |
 | 25 | 최종 정리 + 보안 수정 | dead code 제거, `html.escape()` XSS 방지, Expander CSS 호환성 | `c84791c` |
+| 26 | 속도 최적화 + 한글 표시 | 프롬프트 응답 길이 제한, 병렬 기본값, problem_type 한글 매핑 | `58d52ac` |
+| 27 | 분석 모드 세그먼트 컨트롤 | 빠른 분석/심층 분석 탭 UI, 사이드바 체크박스 제거 | `9026ea4` |
 
 ---
 
@@ -337,6 +339,49 @@ if prompt := st.chat_input("질문을 입력하세요"):
 - Expander 셀렉터: `.streamlit-expanderHeader` (구버전) + `div[data-testid="stExpander"]` (1.55+) 병행
 
 **영향 파일:** `.streamlit/config.toml`, `streamlit_app.py`
+
+---
+
+### 2.13 속도 최적화 + 문제 유형 한글 표시
+
+**증상:**
+1. 질문 입력 후 분석 완료까지 너무 오래 걸림 (최대 4회 순차 LLM 호출)
+2. 문제 유형에 영문 값 `both`가 그대로 표시되어 사용자에게 의미 없음
+
+**해결 — 속도 최적화:**
+- `strategy_prompt.py`: 전략 2~3개 → **2개로 제한** (3개 이상 금지), 각 전략 2문장 이내
+- `rewriter_prompt.py`: 변경 이유 **1문장으로 제한**
+- `feedback_prompt.py`: 강점/개선점/팁 각 **1문장**, 예시답변 각 **2문장 이내**로 축소 (가장 큰 효과 — 기존에는 긴 예시 답변 2개 요구)
+- 병렬 처리 기본값 `True`로 변경
+
+**해결 — 문제 유형 표시:**
+```python
+problem_type_labels = {
+    "specificity": "구체성 부족",
+    "structure": "구조 미흡",
+    "both": "구체성+구조",
+    "good": "양호",
+}
+```
+
+**영향 파일:** `app/prompts/strategy_prompt.py`, `app/prompts/rewriter_prompt.py`, `app/prompts/feedback_prompt.py`, `streamlit_app.py`
+
+---
+
+### 2.14 분석 모드 선택 UI — 빠른 분석 / 심층 분석
+
+**변경 전:**
+- 사이드바에 "병렬 처리" 체크박스 — 사용자에게 의미가 불명확
+
+**변경 후:**
+- 사이드바 체크박스 제거
+- 메인 영역 타이틀 아래에 **세그먼트 컨트롤** 추가 (코칭 모드에서만 표시)
+  - **⚡ 빠른 분석** (블루 `#1F6FEB`): 병렬 그래프 — diagnoser + researcher 동시 실행
+  - **🔬 심층 분석** (퍼플 `#8B5CF6`): 순차 그래프 — 단계별 정밀 분석
+- 선택에 따라 설명 텍스트 자동 변경
+- `st.radio(horizontal=True)` + CSS 오버라이드로 세그먼트 컨트롤 스타일 구현
+
+**영향 파일:** `streamlit_app.py`
 
 ---
 
