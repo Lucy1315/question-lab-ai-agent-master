@@ -46,6 +46,116 @@ def _format_coaching_result(attempt: dict, all_attempts: list) -> str:
     return "\n".join(parts)
 
 
+def _inject_custom_css():
+    st.markdown("""
+    <style>
+    /* 글로벌 다크 테마 오버라이드 */
+    .stApp { background-color: #0D1117; }
+
+    /* 사이드바 */
+    section[data-testid="stSidebar"] {
+        background-color: #161B22;
+        border-right: 1px solid #21262D;
+    }
+    section[data-testid="stSidebar"] .stRadio label {
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 8px 14px;
+        color: #8B949E;
+        cursor: pointer;
+    }
+    section[data-testid="stSidebar"] .stRadio label[data-checked="true"],
+    section[data-testid="stSidebar"] .stRadio label:has(input:checked) {
+        background: rgba(31,111,235,0.13);
+        border-color: rgba(31,111,235,0.27);
+        color: #58A6FF;
+    }
+
+    /* Expander 스타일 */
+    .streamlit-expanderHeader {
+        background-color: #1C2128 !important;
+        border: 1px solid #21262D !important;
+        border-radius: 8px !important;
+        color: #D1D5DB !important;
+        font-size: 14px !important;
+    }
+    .streamlit-expanderContent {
+        background-color: #1C2128 !important;
+        border: 1px solid #21262D !important;
+        border-top: none !important;
+        color: #9CA3AF !important;
+    }
+
+    /* 버튼 스타일 */
+    .stButton > button {
+        border-radius: 10px;
+        font-weight: 600;
+        padding: 10px 20px;
+        border: 1px solid #30363D;
+        background-color: #21262D;
+        color: #8B949E;
+    }
+    .stButton > button:hover {
+        background-color: #30363D;
+        color: #E5E7EB;
+        border-color: #484F58;
+    }
+
+    /* 프라이머리 버튼 (첫 번째 열 버튼) */
+    div[data-testid="column"]:first-child .stButton > button {
+        background-color: #58A6FF;
+        color: #fff;
+        border-color: #58A6FF;
+    }
+    div[data-testid="column"]:first-child .stButton > button:hover {
+        background-color: #79C0FF;
+        border-color: #79C0FF;
+    }
+
+    /* 채팅 메시지 */
+    .stChatMessage {
+        background-color: #161B22 !important;
+        border: 1px solid #21262D;
+        border-radius: 12px;
+    }
+
+    /* 채팅 입력 */
+    .stChatInput > div {
+        background-color: #161B22 !important;
+        border-color: #30363D !important;
+    }
+
+    /* 메트릭 카드 */
+    div[data-testid="stMetric"] {
+        background-color: #1C2128;
+        border: 1px solid #21262D;
+        border-radius: 10px;
+        padding: 16px;
+        text-align: center;
+    }
+    div[data-testid="stMetric"] label {
+        color: #7D8590 !important;
+        font-size: 12px !important;
+    }
+
+    /* 구분선 */
+    hr { border-color: #21262D !important; }
+
+    /* 텍스트 입력 */
+    .stTextInput input {
+        background-color: #0D1117 !important;
+        border-color: #30363D !important;
+        color: #E5E7EB !important;
+        border-radius: 8px !important;
+    }
+
+    /* 체크박스 */
+    .stCheckbox label { color: #8B949E !important; }
+    </style>
+    """, unsafe_allow_html=True)
+
+
 def _get_default_state() -> dict:
     return {
         "context": None,
@@ -70,6 +180,7 @@ def _get_default_state() -> dict:
 
 
 st.set_page_config(page_title="좋은 질문 연습실", page_icon="💡", layout="wide")
+_inject_custom_css()
 
 # Initialize session state
 if "app_state" not in st.session_state:
