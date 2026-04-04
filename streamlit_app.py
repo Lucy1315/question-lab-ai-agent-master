@@ -32,10 +32,19 @@ def _render_coaching_dashboard(attempt: dict, all_attempts: list):
             <div style="font-size:36px; font-weight:700; color:#F59E0B;">{score}<span style="font-size:16px; color:#7D8590;">/10</span></div>
             <div style="font-size:12px; color:#7D8590; margin-top:8px;">질문 점수</div>
         </div>''', unsafe_allow_html=True)
+    problem_type_labels = {
+        "specificity": "구체성 부족",
+        "structure": "구조 미흡",
+        "both": "구체성+구조",
+        "good": "양호",
+    }
+    problem_label = problem_type_labels.get(
+        attempt.get("problem_type", ""), str(attempt.get("problem_type", ""))
+    )
     with col2:
         st.markdown(f'''
         <div style="background:#1C2128; border:1px solid #21262D; border-radius:10px; padding:20px; text-align:center;">
-            <div style="font-size:20px; font-weight:600; color:#58A6FF;">{escape(str(attempt["problem_type"]))}</div>
+            <div style="font-size:20px; font-weight:600; color:#58A6FF;">{escape(problem_label)}</div>
             <div style="font-size:12px; color:#7D8590; margin-top:8px;">문제 유형</div>
         </div>''', unsafe_allow_html=True)
     with col3:
@@ -332,7 +341,7 @@ with st.sidebar:
     )
     st.session_state.app_state["context"] = context if context else None
 
-    use_parallel = st.checkbox("병렬 처리", value=False)
+    use_parallel = st.checkbox("병렬 처리", value=True)
 
     # Score chart
     attempts = st.session_state.app_state.get("attempts", [])
