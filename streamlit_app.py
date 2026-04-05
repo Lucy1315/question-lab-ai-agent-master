@@ -134,34 +134,40 @@ def _render_research_card(research_data: dict, topic: str):
     """사례 검색 결과 카드를 스타일링하여 표시"""
     examples = research_data.get("examples", [])
     framework = research_data.get("framework", "")
+    if isinstance(framework, dict):
+        framework = framework.get("name", "") + ": " + framework.get("description", "")
+    framework = str(framework)
 
-    examples_html = ""
-    for i, ex in enumerate(examples):
-        examples_html += f'''
-        <div style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; background:#161B22; border-radius:6px; border:1px solid #21262D; margin-bottom:6px;">
-            <span style="background:rgba(31,111,235,0.2); color:#58A6FF; font-size:10px; font-weight:700; min-width:20px; height:20px; border-radius:5px; display:flex; align-items:center; justify-content:center;">{i+1}</span>
-            <span style="color:#D1D5DB; font-size:12px; line-height:1.5;">{escape(str(ex))}</span>
-        </div>'''
-
+    # 헤더
     st.markdown(f'''
-    <div style="background:#161B22; border:1px solid #21262D; border-radius:12px; overflow:hidden;">
-        <div style="background:#1C2128; padding:14px 18px; border-bottom:1px solid #21262D; display:flex; align-items:center; gap:10px;">
-            <span style="background:rgba(88,166,255,0.2); color:#58A6FF; font-size:10px; font-weight:700; padding:3px 10px; border-radius:8px;">사례 검색</span>
-            <span style="color:#E5E7EB; font-size:14px; font-weight:600;">{escape(str(topic))} — 좋은 사례</span>
-        </div>
-        <div style="padding:18px;">
-            <div style="background:#0D1117; border:1px solid #21262D; border-radius:8px; padding:14px; margin-bottom:12px;">
-                <div style="font-size:10px; color:#7D8590; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; font-weight:600;">좋은 질문 사례</div>
-                {examples_html}
-            </div>
-            <div style="background:#0D1117; border:1px solid #21262D; border-radius:8px; padding:14px;">
-                <div style="font-size:10px; color:#7D8590; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; font-weight:600;">추천 프레임워크</div>
-                <div style="background:#161B22; border-radius:6px; padding:12px 14px; border:1px solid #21262D;">
-                    <div style="color:#58A6FF; font-size:14px; font-weight:600; margin-bottom:4px;">{escape(str(framework))}</div>
-                </div>
-            </div>
-        </div>
+    <div style="background:#1C2128; padding:14px 18px; border:1px solid #21262D; border-radius:12px 12px 0 0; display:flex; align-items:center; gap:10px;">
+        <span style="background:rgba(88,166,255,0.2); color:#58A6FF; font-size:10px; font-weight:700; padding:3px 10px; border-radius:8px;">사례 검색</span>
+        <span style="color:#E5E7EB; font-size:14px; font-weight:600;">{escape(str(topic))} — 좋은 사례</span>
     </div>''', unsafe_allow_html=True)
+
+    # 좋은 질문 사례 (개별 렌더링)
+    st.markdown('''
+    <div style="background:#0D1117; border:1px solid #21262D; border-top:none; padding:14px 18px;">
+        <div style="font-size:10px; color:#7D8590; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; font-weight:600;">좋은 질문 사례</div>
+    </div>''', unsafe_allow_html=True)
+    for i, ex in enumerate(examples):
+        st.markdown(
+            f'<div style="background:#161B22; margin:0 18px 6px; padding:10px 12px; border-radius:6px; border:1px solid #21262D; display:flex; align-items:flex-start; gap:10px;">'
+            f'<span style="background:rgba(31,111,235,0.2); color:#58A6FF; font-size:10px; font-weight:700; min-width:20px; height:20px; border-radius:5px; display:flex; align-items:center; justify-content:center;">{i+1}</span>'
+            f'<span style="color:#D1D5DB; font-size:12px; line-height:1.5;">{escape(str(ex))}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    # 추천 프레임워크 (별도 렌더링)
+    st.markdown(
+        f'<div style="background:#0D1117; border:1px solid #21262D; border-top:none; border-radius:0 0 12px 12px; padding:14px 18px;">'
+        f'<div style="font-size:10px; color:#7D8590; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; font-weight:600;">추천 프레임워크</div>'
+        f'<div style="background:#161B22; border-radius:6px; padding:12px 14px; border:1px solid #21262D;">'
+        f'<div style="color:#58A6FF; font-size:14px; font-weight:600; line-height:1.6;">{escape(framework)}</div>'
+        f'</div></div>',
+        unsafe_allow_html=True,
+    )
 
 
 def _inject_custom_css():
