@@ -355,26 +355,41 @@ def _inject_custom_css(theme: str = "dark"):
         st.markdown("""
         <style>
         /* 글로벌 라이트 테마 오버라이드 */
-        .stApp { background-color: #FFFFFF; }
+        .stApp { background-color: #FFFFFF; color: #1F2328; }
+
+        /* 전역 텍스트 색상 강제 */
+        .stApp p, .stApp li, .stApp span, .stApp div,
+        .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 {
+            color: #1F2328 !important;
+        }
+        .stApp .stMarkdown p { color: #1F2328 !important; }
 
         /* 사이드바 */
         section[data-testid="stSidebar"] {
             background-color: #F6F8FA;
             border-right: 1px solid #D0D7DE;
         }
+        section[data-testid="stSidebar"] p,
+        section[data-testid="stSidebar"] span,
+        section[data-testid="stSidebar"] div,
+        section[data-testid="stSidebar"] h1,
+        section[data-testid="stSidebar"] h2,
+        section[data-testid="stSidebar"] h3 {
+            color: #1F2328 !important;
+        }
         section[data-testid="stSidebar"] .stRadio label {
             background: transparent;
             border: 1px solid transparent;
             border-radius: 8px;
             padding: 8px 14px;
-            color: #57606A;
+            color: #424A53 !important;
             cursor: pointer;
         }
         section[data-testid="stSidebar"] .stRadio label[data-checked="true"],
         section[data-testid="stSidebar"] .stRadio label:has(input:checked) {
             background: rgba(31,111,235,0.08);
             border-color: rgba(31,111,235,0.2);
-            color: #0969DA;
+            color: #0969DA !important;
         }
 
         /* Expander 스타일 */
@@ -383,7 +398,7 @@ def _inject_custom_css(theme: str = "dark"):
             background-color: #F6F8FA !important;
             border: 1px solid #D0D7DE !important;
             border-radius: 8px !important;
-            color: #24292F !important;
+            color: #1F2328 !important;
             font-size: 14px !important;
         }
         .streamlit-expanderContent,
@@ -391,7 +406,10 @@ def _inject_custom_css(theme: str = "dark"):
             background-color: #F6F8FA !important;
             border: 1px solid #D0D7DE !important;
             border-top: none !important;
-            color: #57606A !important;
+            color: #424A53 !important;
+        }
+        div[data-testid="stExpander"] details div[data-testid="stExpanderDetails"] p {
+            color: #424A53 !important;
         }
 
         /* 버튼 스타일 */
@@ -401,11 +419,11 @@ def _inject_custom_css(theme: str = "dark"):
             padding: 10px 20px;
             border: 1px solid #D0D7DE;
             background-color: #F6F8FA;
-            color: #24292F;
+            color: #1F2328;
         }
         .stButton > button:hover {
             background-color: #EAEEF2;
-            color: #24292F;
+            color: #1F2328;
             border-color: #AFB8C1;
         }
 
@@ -426,11 +444,22 @@ def _inject_custom_css(theme: str = "dark"):
             border: 1px solid #D0D7DE;
             border-radius: 12px;
         }
+        .stChatMessage p, .stChatMessage span, .stChatMessage div {
+            color: #1F2328 !important;
+        }
 
         /* 채팅 입력 */
         .stChatInput > div {
             background-color: #FFFFFF !important;
             border-color: #D0D7DE !important;
+        }
+        .stChatInput textarea,
+        .stChatInput input {
+            background-color: #FFFFFF !important;
+            color: #1F2328 !important;
+        }
+        .stChatInput textarea::placeholder {
+            color: #6E7781 !important;
         }
 
         /* 메트릭 카드 */
@@ -442,7 +471,7 @@ def _inject_custom_css(theme: str = "dark"):
             text-align: center;
         }
         div[data-testid="stMetric"] label {
-            color: #57606A !important;
+            color: #424A53 !important;
             font-size: 12px !important;
         }
 
@@ -453,12 +482,18 @@ def _inject_custom_css(theme: str = "dark"):
         .stTextInput input {
             background-color: #FFFFFF !important;
             border-color: #D0D7DE !important;
-            color: #24292F !important;
+            color: #1F2328 !important;
             border-radius: 8px !important;
         }
+        .stTextInput input::placeholder {
+            color: #6E7781 !important;
+        }
+
+        /* 타이틀 */
+        .stApp h1 { color: #1F2328 !important; }
 
         /* 체크박스 */
-        .stCheckbox label { color: #57606A !important; }
+        .stCheckbox label { color: #424A53 !important; }
 
         /* 세그먼트 컨트롤 (메인 영역 horizontal radio) */
         .stMainBlockContainer div[data-testid="stHorizontalBlock"]:has(div[data-testid="stRadio"]) div[data-testid="stRadio"] > div[role="radiogroup"] {
@@ -474,7 +509,7 @@ def _inject_custom_css(theme: str = "dark"):
             padding: 10px 24px !important;
             border-radius: 8px !important;
             font-weight: 600 !important;
-            color: #57606A !important;
+            color: #424A53 !important;
             background: transparent !important;
             border: none !important;
             margin: 0 !important;
@@ -487,6 +522,7 @@ def _inject_custom_css(theme: str = "dark"):
         }
         .stMainBlockContainer div[data-testid="stRadio"] > div[role="radiogroup"] > label:last-child:has(input:checked) {
             background: #8250DF !important;
+            color: #fff !important;
             box-shadow: 0 2px 8px rgba(130,80,223,0.3);
         }
         .stMainBlockContainer div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
